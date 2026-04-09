@@ -17,6 +17,9 @@ jobs:
           cache: npm
           cache-dependency-path: Client/package-lock.json
       - name: Install and build client
+        env:
+          # Redundant with Client/.env.production; ensures username→email login works if env files change
+          VITE_API_URL: https://flux--fluxyv3-prod.us-east4.hosted.app
         run: |
           cd Client
           npm ci
