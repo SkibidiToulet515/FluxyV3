@@ -18,7 +18,7 @@ import { initFirebase } from './config/firebase.js';
 
 initFirebase();
 
-const PORT = Number(process.env.PORT) || 3001;
+const PORT = Number(process.env.PORT) || 3000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 const ALLOWED_ORIGINS = CLIENT_ORIGIN.split(',').map(s => s.trim());
 

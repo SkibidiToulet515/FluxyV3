@@ -1,13 +1,24 @@
 const API_BASE = (import.meta.env.VITE_API_URL || '') + '/api';
 
+async function parseJsonArray(res) {
+  const ct = res.headers.get('content-type') || '';
+  if (!ct.includes('application/json')) {
+    return [];
+  }
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
 export async function fetchGames() {
   const res = await fetch(`${API_BASE}/games`);
-  return res.json();
+  if (!res.ok) return [];
+  return parseJsonArray(res);
 }
 
 export async function searchGames(query) {
   const res = await fetch(`${API_BASE}/games/search?q=${encodeURIComponent(query)}`);
-  return res.json();
+  if (!res.ok) return [];
+  return parseJsonArray(res);
 }
 
 export function getRecentlyPlayed() {
