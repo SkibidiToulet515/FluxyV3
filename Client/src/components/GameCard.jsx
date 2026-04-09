@@ -26,7 +26,8 @@ export default function GameCard({ game }) {
 
   function handlePlay() {
     addRecentlyPlayed(game);
-    navigate(`/play/${game.id}`);
+    const path = game.id.split('/').map(encodeURIComponent).join('/');
+    navigate(`/play/${path}`);
   }
 
   return (

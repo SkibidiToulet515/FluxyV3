@@ -7,6 +7,32 @@ const UGS_DIR = path.resolve(import.meta.dirname, '..', '..', 'UGS Files');
 /** @type {Array<{ id: string, name: string, file: string, category: string }> | null} */
 let cachedGames = null;
 
+function posixRel(rel) {
+  return rel.split(path.sep).join('/');
+}
+
+/** @param {string} relPath relative path under UGS_DIR using native separators */
+function relativeHtmlId(relPath) {
+  return posixRel(relPath).replace(/\.html$/i, '');
+}
+
+/**
+ * @returns {Promise<string[]>} .html paths relative to rootDir (native separators)
+ */
+async function walkHtmlRelPaths(rootDir) {
+  const entries = await fs.readdir(rootDir, { withFileTypes: true });
+  const out = [];
+  for (const e of entries) {
+    const full = path.join(rootDir, e.name);
+    if (e.isDirectory()) {
+      out.push(...(await walkHtmlRelPaths(full)));
+    } else if (e.isFile() && /\.html$/i.test(e.name)) {
+      out.push(path.relative(UGS_DIR, full));
+    }
+  }
+  return out;
+}
+
 /** Words used for greedy segmentation of concatenated lowercase names (longest first). */
 const SEGMENT_TOKENS = [
   ...new Set([
@@ -241,22 +267,17 @@ function categorize(nameLower) {
   return 'Arcade';
 }
 
-function fileId(filename) {
-  return filename.replace(/\.html$/i, '');
-}
-
 async function scanGames() {
-  const entries = await fs.readdir(UGS_DIR, { withFileTypes: true });
-  const htmlFiles = entries
-    .filter((e) => e.isFile() && /\.html$/i.test(e.name))
-    .map((e) => e.name)
-    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  const relPaths = await walkHtmlRelPaths(UGS_DIR);
+  relPaths.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
-  return htmlFiles.map((file) => {
-    const name = toDisplayName(file);
+  return relPaths.map((relPath) => {
+    const file = posixRel(relPath);
+    const basename = path.basename(relPath);
+    const name = toDisplayName(basename);
     const nameLower = name.toLowerCase();
     return {
-      id: fileId(file),
+      id: relativeHtmlId(relPath),
       name,
       file,
       category: categorize(nameLower),

@@ -50,7 +50,7 @@ function AppShell() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/admin" element={<AdminPanel />} />
         </Route>
-        <Route path="/play/:gameId" element={<GamePlayer />} />
+        <Route path="/play/*" element={<GamePlayer />} />
       </Routes>
     </>
   );

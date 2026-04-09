@@ -5,7 +5,7 @@ import { fetchGames } from '../utils/api';
 import './GamePlayer.css';
 
 export default function GamePlayer() {
-  const { gameId } = useParams();
+  const { '*': gameId } = useParams();
   const navigate = useNavigate();
   const [game, setGame] = useState(null);
   const [fullscreen, setFullscreen] = useState(false);
@@ -48,7 +48,7 @@ export default function GamePlayer() {
     );
   }
 
-  const gameUrl = `/games/${encodeURIComponent(game.file)}`;
+  const gameUrl = `/games/${game.file.split('/').map(encodeURIComponent).join('/')}`;
 
   return (
     <div className={`game-player-page ${fullscreen ? 'fullscreen' : ''}`}>

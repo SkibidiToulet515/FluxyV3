@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "build:client": "npm run build --prefix Client",
-    "deploy:hosting": "npm run build:client && firebase deploy --only hosting"
+    "deploy:hosting": "npm run build:client && firebase deploy --only hosting",
+    "check-ugs": "node scripts/check-ugs-files.mjs"
   }
 }
