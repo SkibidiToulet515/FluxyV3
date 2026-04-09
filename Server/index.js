@@ -13,6 +13,7 @@ import chatRouter, { recentMessages } from './routes/chat.js';
 import providersRouter from './routes/providers.js';
 import giphyRouter from './routes/giphy.js';
 import adminRouter from './routes/admin.js';
+import authResolveRouter from './routes/authResolve.js';
 import { initFirebase } from './config/firebase.js';
 
 initFirebase();
@@ -25,7 +26,13 @@ const app = express();
 app.use(
   cors({
     origin(origin, cb) {
-      if (!origin || ALLOWED_ORIGINS.some(o => origin === o || origin.endsWith('.hosted.app'))) {
+      if (
+        !origin ||
+        ALLOWED_ORIGINS.some((o) => origin === o) ||
+        origin.endsWith('.hosted.app') ||
+        origin.endsWith('.web.app') ||
+        origin.endsWith('.firebaseapp.com')
+      ) {
         cb(null, true);
       } else {
         cb(null, false);
@@ -56,6 +63,7 @@ const ugsPath = path.resolve(import.meta.dirname, '..', 'UGS Files');
 app.use('/games', express.static(ugsPath));
 
 // --- API routes ---
+app.use('/api/auth', authResolveRouter);
 app.use('/api/games', gamesRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/providers', providersRouter);
@@ -92,7 +100,13 @@ httpServer.on('upgrade', (req, socket, head) => {
 const io = new Server(httpServer, {
   cors: {
     origin(origin, cb) {
-      if (!origin || ALLOWED_ORIGINS.some(o => origin === o || origin.endsWith('.hosted.app'))) {
+      if (
+        !origin ||
+        ALLOWED_ORIGINS.some((o) => origin === o) ||
+        origin.endsWith('.hosted.app') ||
+        origin.endsWith('.web.app') ||
+        origin.endsWith('.firebaseapp.com')
+      ) {
         cb(null, true);
       } else {
         cb(null, false);

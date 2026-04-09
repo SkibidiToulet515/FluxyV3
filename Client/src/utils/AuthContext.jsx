@@ -7,7 +7,7 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import { auth } from '../services/firebase';
-import { createUserDoc, getUserDoc, updateUserDoc, subscribeUser, getUserByUsername } from '../services/firestore';
+import { createUserDoc, getUserDoc, updateUserDoc, subscribeUser } from '../services/firestore';
 
 const AuthContext = createContext(null);
 
@@ -20,6 +20,23 @@ function toSyntheticEmail(username) {
 
 function isSyntheticEmail(email) {
   return email?.endsWith(SYNTHETIC_DOMAIN);
+}
+
+async function resolveUsernameToEmail(username) {
+  const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+  if (!base) return null;
+  try {
+    const res = await fetch(`${base}/api/auth/resolve-username`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.found && data.email ? data.email : null;
+  } catch {
+    return null;
+  }
 }
 
 export function AuthProvider({ children }) {
@@ -59,12 +76,8 @@ export function AuthProvider({ children }) {
     let email = identifier.trim();
 
     if (!email.includes('@')) {
-      const userDoc = await getUserByUsername(email);
-      if (userDoc?.email) {
-        email = userDoc.email;
-      } else {
-        email = toSyntheticEmail(email);
-      }
+      const resolved = await resolveUsernameToEmail(email);
+      email = resolved || toSyntheticEmail(email);
     }
 
     const cred = await signInWithEmailAndPassword(auth, email, password);
