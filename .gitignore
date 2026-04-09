@@ -17,10 +17,6 @@ serviceAccountKey.json
 *-debug.log
 firebase-debug.log
 
-# Large game files (exceed GitHub 100MB limit)
-# Keep these locally but they won't be in the repo
-UGS Files/
-
 # OS files
 .DS_Store
 Thumbs.db
