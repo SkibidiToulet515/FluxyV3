@@ -50,6 +50,7 @@ async function seed() {
   await db.collection('users').doc(uid).set(
     {
       username: ADMIN_USERNAME,
+      usernameLower: ADMIN_USERNAME.toLowerCase(),
       email: ADMIN_EMAIL,
       role: 'admin',
       status: 'offline',

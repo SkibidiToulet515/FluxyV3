@@ -9,8 +9,10 @@ import { db } from './firebase';
 // ─── Users ────────────────────────────────────────────────────────────────────
 
 export async function createUserDoc(uid, data) {
+  const uname = data.username || '';
   await setDoc(doc(db, 'users', uid), {
-    username: data.username,
+    username: uname,
+    usernameLower: uname.toLowerCase(),
     email: data.email,
     role: 'user',
     status: 'online',

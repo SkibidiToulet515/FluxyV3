@@ -11,7 +11,8 @@ function formatFirebaseError(code) {
     'auth/weak-password': 'Password must be at least 6 characters.',
     'auth/user-not-found': 'No account found with that username.',
     'auth/wrong-password': 'Incorrect password.',
-    'auth/invalid-credential': 'Invalid username or password.',
+    'auth/invalid-credential':
+      'Wrong password, or that username is not registered. Try signing in with your email if you added one.',
     'auth/too-many-requests': 'Too many attempts. Please try again later.',
   };
   return map[code] || 'Something went wrong. Please try again.';

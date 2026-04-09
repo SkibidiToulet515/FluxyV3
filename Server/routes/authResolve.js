@@ -3,8 +3,16 @@ import { getAdminFirestore } from '../config/firebase.js';
 
 const router = Router();
 
+function usernameLookupVariants(raw) {
+  const t = raw.trim();
+  const lower = t.toLowerCase();
+  const title = lower ? lower.charAt(0).toUpperCase() + lower.slice(1) : t;
+  return [...new Set([t, lower, title, t.toUpperCase()])].filter(Boolean);
+}
+
 /**
  * Pre-login: map username -> Auth email (Firestore rules block client reads while logged out).
+ * Tries case variants because Firestore username match is exact.
  */
 router.post('/resolve-username', async (req, res) => {
   const username = typeof req.body?.username === 'string' ? req.body.username.trim() : '';
@@ -14,7 +22,17 @@ router.post('/resolve-username', async (req, res) => {
 
   try {
     const db = getAdminFirestore();
-    const snap = await db.collection('users').where('username', '==', username).limit(1).get();
+    const lower = username.toLowerCase();
+
+    let snap = await db.collection('users').where('usernameLower', '==', lower).limit(1).get();
+
+    if (snap.empty) {
+      for (const variant of usernameLookupVariants(username)) {
+        snap = await db.collection('users').where('username', '==', variant).limit(1).get();
+        if (!snap.empty) break;
+      }
+    }
+
     if (snap.empty) {
       return res.status(404).json({ found: false });
     }
