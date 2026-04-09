@@ -92,7 +92,18 @@ export default function Games() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="games-empty glass-card">
-          <p>No games found matching your search.</p>
+          {allGames.length === 0 ? (
+            <>
+              <p>No games are available yet.</p>
+              <p className="games-empty-hint">
+                An admin can add games in the Admin panel (Firestore), or deploy HTML games to the server&apos;s
+                <code> UGS Files </code>
+                folder for automatic listing.
+              </p>
+            </>
+          ) : (
+            <p>No games found matching your search.</p>
+          )}
         </div>
       ) : (
         <>

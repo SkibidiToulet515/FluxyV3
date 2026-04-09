@@ -11,7 +11,11 @@ async function parseJsonArray(res) {
 
 export async function fetchGames() {
   const res = await fetch(`${API_BASE}/games`);
-  if (!res.ok) return [];
+  if (!res.ok) {
+    const err = new Error(`Games API failed: ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
   return parseJsonArray(res);
 }
 

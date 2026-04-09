@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Maximize, Minimize, ExternalLink } from 'lucide-react';
 import { fetchGames } from '../utils/api';
+import { getGamePlaySrc } from '../utils/gamePlayUrl';
 import './GamePlayer.css';
 
 export default function GamePlayer() {
@@ -48,7 +49,7 @@ export default function GamePlayer() {
     );
   }
 
-  const gameUrl = `/games/${encodeURIComponent(game.file)}`;
+  const gameUrl = getGamePlaySrc(game);
 
   return (
     <div className={`game-player-page ${fullscreen ? 'fullscreen' : ''}`}>

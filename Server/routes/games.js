@@ -1,11 +1,22 @@
 import express from 'express';
 import fs from 'fs/promises';
 import path from 'path';
+import { getAdminFirestore, isFirebaseAdminReady } from '../config/firebase.js';
 
 const UGS_DIR = path.resolve(import.meta.dirname, '..', '..', 'UGS Files');
 
-/** @type {Array<{ id: string, name: string, file: string, category: string }> | null} */
-let cachedGames = null;
+/** @type {{ at: number, data: Array<{ id: string, name: string, file: string, category: string, playUrl?: string | null }> } | null} */
+let mergedCache = null;
+const MERGE_TTL_MS = 45_000;
+
+async function getMergedGames() {
+  if (mergedCache && Date.now() - mergedCache.at < MERGE_TTL_MS) {
+    return mergedCache.data;
+  }
+  const data = await loadAllGames();
+  mergedCache = { at: Date.now(), data };
+  return data;
+}
 
 /** Words used for greedy segmentation of concatenated lowercase names (longest first). */
 const SEGMENT_TOKENS = [
@@ -245,6 +256,59 @@ function fileId(filename) {
   return filename.replace(/\.html$/i, '');
 }
 
+function fileFromFirestoreUrl(url) {
+  if (!url || typeof url !== 'string') return null;
+  const t = url.trim();
+  if (!t) return null;
+  if (/^https?:\/\//i.test(t)) return null;
+  const m =
+    t.match(/\/games\/([^/?#]+)$/i) ||
+    t.match(/^\/?games\/([^/?#]+)$/i) ||
+    t.match(/^([^/]+\.html)$/i);
+  if (m) return decodeURIComponent(m[1]);
+  return null;
+}
+
+function mapFirestoreCategory(cat) {
+  if (!cat || cat === 'Uncategorized') return 'Arcade';
+  const allowed = [
+    'Action', 'Adventure', 'Arcade', 'Horror', '2 Player', 'Puzzle', 'Racing', 'Platformer',
+    'Sports', 'Strategy', 'Shooting', 'Simulation', 'RPG', 'Other',
+  ];
+  return allowed.includes(cat) ? cat : 'Arcade';
+}
+
+async function loadFirestoreGamesList() {
+  if (!isFirebaseAdminReady()) return [];
+  try {
+    const db = getAdminFirestore();
+    const snap = await db.collection('games').get();
+    const out = [];
+    for (const doc of snap.docs) {
+      const d = doc.data();
+      if (d.visible === false) continue;
+      const title = (d.title || '').trim();
+      if (!title) continue;
+      const url = (d.url || '').trim();
+      const playUrl = /^https?:\/\//i.test(url) ? url : null;
+      const file = playUrl ? null : fileFromFirestoreUrl(url);
+      if (!playUrl && !file) continue;
+      out.push({
+        id: doc.id,
+        name: title,
+        file: file || '',
+        category: mapFirestoreCategory(d.category),
+        playUrl,
+        thumbnail: d.thumbnail || null,
+      });
+    }
+    return out;
+  } catch (err) {
+    console.warn('[games] Firestore list failed:', err.message);
+    return [];
+  }
+}
+
 async function scanGames() {
   const entries = await fs.readdir(UGS_DIR, { withFileTypes: true });
   const htmlFiles = entries
@@ -260,18 +324,42 @@ async function scanGames() {
       name,
       file,
       category: categorize(nameLower),
+      playUrl: null,
     };
   });
+}
+
+function mergeGameLists(fsGames, dbGames) {
+  const byKey = new Map();
+  for (const g of fsGames) {
+    byKey.set(`f:${g.file}`, g);
+  }
+  for (const g of dbGames) {
+    const key = g.file ? `f:${g.file}` : `d:${g.id}`;
+    if (!byKey.has(key)) byKey.set(key, g);
+  }
+  return [...byKey.values()].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+  );
+}
+
+async function loadAllGames() {
+  let fsGames = [];
+  try {
+    fsGames = await scanGames();
+  } catch (err) {
+    console.warn('[games] UGS folder missing or unreadable (normal on App Hosting):', err.code || err.message);
+  }
+  const dbGames = await loadFirestoreGamesList();
+  return mergeGameLists(fsGames, dbGames);
 }
 
 const router = express.Router();
 
 router.get('/', async (req, res, next) => {
   try {
-    if (!cachedGames) {
-      cachedGames = await scanGames();
-    }
-    res.json(cachedGames);
+    const list = await getMergedGames();
+    res.json(list);
   } catch (err) {
     next(err);
   }
@@ -279,9 +367,7 @@ router.get('/', async (req, res, next) => {
 
 router.get('/search', async (req, res, next) => {
   try {
-    if (!cachedGames) {
-      cachedGames = await scanGames();
-    }
+    const cachedGames = await getMergedGames();
     const q = String(req.query.q ?? '')
       .trim()
       .toLowerCase();

@@ -72,6 +72,20 @@
   font-size: 0.875rem;
 }
 
+.games-empty-hint {
+  margin-top: 0.75rem;
+  max-width: 36rem;
+  margin-inline: auto;
+  line-height: 1.5;
+}
+
+.games-empty code {
+  font-size: 0.8em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--glass-bg, rgba(255, 255, 255, 0.06));
+}
+
 /* --- Load more --- */
 .load-more-row {
   display: flex;
