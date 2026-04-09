@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAdminFirestore } from '../config/firebase.js';
+import { getAdminFirestore, isFirebaseAdminReady } from '../config/firebase.js';
 
 const router = Router();
 
@@ -18,6 +18,13 @@ router.post('/resolve-username', async (req, res) => {
   const username = typeof req.body?.username === 'string' ? req.body.username.trim() : '';
   if (!username || username.length < 3) {
     return res.status(400).json({ error: 'Invalid username' });
+  }
+
+  if (!isFirebaseAdminReady()) {
+    return res.status(503).json({
+      error: 'admin_not_ready',
+      message: 'Set FIREBASE_SERVICE_ACCOUNT_JSON (or valid ADC) on the server.',
+    });
   }
 
   try {

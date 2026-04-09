@@ -1,8 +1,27 @@
 import admin from 'firebase-admin';
-import { createRequire } from 'module';
+import { readFileSync } from 'fs';
+import path from 'path';
 
 let initialized = false;
-const require = createRequire(import.meta.url);
+
+function loadCredential() {
+  const jsonRaw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim();
+  if (jsonRaw) {
+    const parsed = JSON.parse(jsonRaw);
+    return admin.credential.cert(parsed);
+  }
+
+  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (serviceAccountPath) {
+    const resolved = path.isAbsolute(serviceAccountPath)
+      ? serviceAccountPath
+      : path.resolve(process.cwd(), serviceAccountPath);
+    const serviceAccount = JSON.parse(readFileSync(resolved, 'utf8'));
+    return admin.credential.cert(serviceAccount);
+  }
+
+  return admin.credential.applicationDefault();
+}
 
 export function initFirebase() {
   if (initialized) return;
@@ -13,19 +32,18 @@ export function initFirebase() {
     return;
   }
 
-  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT;
-
-  if (serviceAccountPath) {
-    const serviceAccount = require(serviceAccountPath);
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-  } else {
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-      projectId,
-    });
+  try {
+    const credential = loadCredential();
+    admin.initializeApp({ credential, projectId });
+    initialized = true;
+    console.log('[Firebase Admin] Initialized for project:', projectId);
+  } catch (err) {
+    console.error('[Firebase Admin] init failed:', err.message);
   }
-  initialized = true;
-  console.log('[Firebase Admin] Initialized for project:', projectId);
+}
+
+export function isFirebaseAdminReady() {
+  return initialized && admin.apps.length > 0;
 }
 
 export function getAdminAuth() {
@@ -33,6 +51,9 @@ export function getAdminAuth() {
 }
 
 export function getAdminFirestore() {
+  if (!isFirebaseAdminReady()) {
+    throw new Error('Firebase Admin is not initialized');
+  }
   return admin.firestore();
 }
 

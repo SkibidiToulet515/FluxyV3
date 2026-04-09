@@ -24,18 +24,21 @@ function isSyntheticEmail(email) {
 
 async function resolveUsernameToEmail(username) {
   const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-  if (!base) return null;
+  if (!base) return { email: null, noApiUrl: true };
   try {
     const res = await fetch(`${base}/api/auth/resolve-username`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username }),
     });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.found && data.email ? data.email : null;
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 404) return { email: null, notFound: true };
+    if (res.status === 503 || res.status >= 500) return { email: null, serverDown: true };
+    if (!res.ok) return { email: null, serverDown: true };
+    if (data.found && data.email) return { email: data.email };
+    return { email: null, notFound: true };
   } catch {
-    return null;
+    return { email: null, networkError: true };
   }
 }
 
@@ -76,8 +79,17 @@ export function AuthProvider({ children }) {
     let email = identifier.trim();
 
     if (!email.includes('@')) {
-      const resolved = await resolveUsernameToEmail(email);
-      email = resolved || toSyntheticEmail(email);
+      const rawUser = email;
+      const r = await resolveUsernameToEmail(rawUser);
+      if (r.serverDown || r.networkError) {
+        throw new Error(
+          'Login service could not look up your username (server misconfigured). Sign in with your email instead — for Fluxinator use admin@fluxyv3.online.',
+        );
+      }
+      if (r.noApiUrl) {
+        throw new Error('App is missing API configuration. Contact the site owner.');
+      }
+      email = r.email || toSyntheticEmail(rawUser);
     }
 
     const cred = await signInWithEmailAndPassword(auth, email, password);
