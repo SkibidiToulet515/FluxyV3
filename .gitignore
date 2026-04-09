@@ -37,3 +37,6 @@ npm-debug.log*
 # Cache
 .cache/
 .parcel-cache/
+
+# Firebase CLI local cache
+.firebase/

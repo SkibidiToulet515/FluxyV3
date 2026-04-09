@@ -1,0 +1,8 @@
+{
+  "name": "fluxy-monorepo",
+  "private": true,
+  "scripts": {
+    "build:client": "npm run build --prefix Client",
+    "deploy:hosting": "npm run build:client && firebase deploy --only hosting"
+  }
+}
