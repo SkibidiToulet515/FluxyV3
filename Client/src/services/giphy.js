@@ -1,4 +1,4 @@
-const API_BASE = '/api/giphy';
+const API_BASE = (import.meta.env.VITE_API_URL || '') + '/api/giphy';
 
 export async function fetchTrending() {
   const res = await fetch(`${API_BASE}/trending`);

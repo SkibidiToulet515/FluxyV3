@@ -20,7 +20,7 @@ export const scramjetAdapter = {
   },
 
   get healthEndpoint() {
-    return '/api/providers/scramjet/status';
+    return (import.meta.env.VITE_API_URL || '') + '/api/providers/scramjet/status';
   },
 };
 

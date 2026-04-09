@@ -9,7 +9,7 @@ import './Chat.css';
 
 let socket = null;
 function getSocket() {
-  if (!socket) socket = io('/', { autoConnect: false });
+  if (!socket) socket = io(import.meta.env.VITE_API_URL || '/', { autoConnect: false });
   return socket;
 }
 

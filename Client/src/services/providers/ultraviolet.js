@@ -30,7 +30,7 @@ export const ultravioletAdapter = {
   },
 
   get healthEndpoint() {
-    return '/api/providers/ultraviolet/status';
+    return (import.meta.env.VITE_API_URL || '') + '/api/providers/ultraviolet/status';
   },
 };
 

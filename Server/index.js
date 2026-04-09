@@ -19,11 +19,18 @@ initFirebase();
 
 const PORT = Number(process.env.PORT) || 3001;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+const ALLOWED_ORIGINS = CLIENT_ORIGIN.split(',').map(s => s.trim());
 
 const app = express();
 app.use(
   cors({
-    origin: CLIENT_ORIGIN,
+    origin(origin, cb) {
+      if (!origin || ALLOWED_ORIGINS.some(o => origin === o || origin.endsWith('.hosted.app'))) {
+        cb(null, true);
+      } else {
+        cb(null, false);
+      }
+    },
     credentials: true,
   }),
 );
@@ -84,8 +91,15 @@ httpServer.on('upgrade', (req, socket, head) => {
 // --- Socket.io (chat) — attach after wisp so wisp gets first crack at upgrades ---
 const io = new Server(httpServer, {
   cors: {
-    origin: CLIENT_ORIGIN,
+    origin(origin, cb) {
+      if (!origin || ALLOWED_ORIGINS.some(o => origin === o || origin.endsWith('.hosted.app'))) {
+        cb(null, true);
+      } else {
+        cb(null, false);
+      }
+    },
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
 

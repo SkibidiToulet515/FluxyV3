@@ -43,14 +43,6 @@ export function subscribeUser(uid, callback) {
   });
 }
 
-export async function getUserByUsername(username) {
-  const q = query(collection(db, 'users'), where('username', '==', username), limit(1));
-  const snap = await getDocs(q);
-  if (snap.empty) return null;
-  const d = snap.docs[0];
-  return { uid: d.id, ...d.data() };
-}
-
 export async function setUserRole(uid, role) {
   await updateDoc(doc(db, 'users', uid), { role });
 }
