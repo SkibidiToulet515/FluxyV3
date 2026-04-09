@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build output
+Client/dist/
+Server/dist/
+
+# Environment files (contain secrets)
+.env
+*.env.local
+*.env.production.local
+*.env.development.local
+
+# Firebase secrets
+serviceAccountKey.json
+*firebase-adminsdk*.json
+*-debug.log
+firebase-debug.log
+
+# Large game files (exceed GitHub 100MB limit)
+# Keep these locally but they won't be in the repo
+UGS Files/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Cache
+.cache/
+.parcel-cache/

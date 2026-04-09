@@ -1,0 +1,40 @@
+.layout {
+  min-height: 100vh;
+}
+
+.layout-content {
+  min-height: 100vh;
+  padding: 1.5rem 2.5rem 3rem;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    padding-bottom 0.3s ease;
+}
+
+.layout-content.with-sidebar {
+  margin-left: 240px;
+}
+
+.layout-content.with-sidebar-collapsed {
+  margin-left: 64px;
+}
+
+.layout-content.with-taskbar {
+  margin-left: 0;
+  padding-bottom: 88px;
+}
+
+@media (max-width: 1024px) {
+  .layout-content {
+    padding: 1.25rem 1.5rem 2.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout-content {
+    padding: 1rem 1rem 2rem;
+  }
+
+  .layout-content.with-sidebar,
+  .layout-content.with-sidebar-collapsed {
+    margin-left: 0;
+  }
+}

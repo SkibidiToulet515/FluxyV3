@@ -1,0 +1,108 @@
+import { NavLink } from 'react-router-dom';
+import {
+  Home, Gamepad2, MessageCircle, Settings, Globe,
+  ChevronLeft, ChevronRight, LogOut, Circle, ShieldAlert,
+} from 'lucide-react';
+import { useAuth } from '../utils/AuthContext';
+import './Sidebar.css';
+
+const NAV_ITEMS = [
+  { to: '/', icon: Home, label: 'Home' },
+  { to: '/games', icon: Gamepad2, label: 'Games' },
+  { to: '/chat', icon: MessageCircle, label: 'Chat' },
+  { to: '/proxy', icon: Globe, label: 'Web Tools' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
+];
+
+const STATUS_COLORS = {
+  online: '#34d399',
+  idle: '#fbbf24',
+  dnd: '#ef4444',
+  offline: '#71717a',
+};
+
+export default function Sidebar({ collapsed, onToggle, account, onLogout }) {
+  const { isAdmin } = useAuth();
+  const statusColor = STATUS_COLORS[account?.status || 'offline'];
+
+  return (
+    <>
+      {!collapsed && <div className="sidebar-overlay" onClick={onToggle} />}
+      <aside className={`sidebar glass-bg ${collapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-header">
+          <div className="sidebar-logo">
+            <span className="logo-icon">F</span>
+            <span className="logo-text">Fluxy</span>
+          </div>
+          <button
+            className="sidebar-collapse-btn"
+            onClick={onToggle}
+            title={collapsed ? 'Expand' : 'Collapse'}
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+        </div>
+
+        <nav className="sidebar-nav">
+          {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              className={({ isActive }) =>
+                `sidebar-link ${isActive ? 'active' : ''}`
+              }
+              title={collapsed ? label : undefined}
+            >
+              <Icon size={20} />
+              <span className="sidebar-label">{label}</span>
+            </NavLink>
+          ))}
+          {isAdmin && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                `sidebar-link sidebar-link-admin ${isActive ? 'active' : ''}`
+              }
+              title={collapsed ? 'Admin' : undefined}
+            >
+              <ShieldAlert size={20} />
+              <span className="sidebar-label">Admin</span>
+            </NavLink>
+          )}
+        </nav>
+
+        {account && (
+          <div className="sidebar-account">
+            <div className="sidebar-avatar-wrap">
+              <div
+                className="sidebar-avatar"
+                style={{ background: account.color || 'var(--accent)' }}
+              >
+                {account.username.charAt(0).toUpperCase()}
+              </div>
+              <span
+                className="sidebar-status-dot"
+                style={{ background: statusColor }}
+              />
+            </div>
+            <div className="sidebar-account-info">
+              <span className="sidebar-username">{account.username}</span>
+              <span className="sidebar-status-text">
+                <Circle size={8} fill={statusColor} stroke="none" />
+                {account.status || 'online'}
+              </span>
+            </div>
+            <button
+              className="sidebar-logout-btn"
+              onClick={onLogout}
+              title="Log out"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        )}
+      </aside>
+    </>
+  );
+}
