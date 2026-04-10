@@ -1,3 +1,2 @@
-# Large UGS game bundles — store with Git LFS (install: https://git-lfs.com)
-# After clone: run `git lfs install` and `git lfs pull` if files show as pointers.
-Client/UGS Files/** filter=lfs diff=lfs merge=lfs -text
+# Large UGS game bundles — Git LFS (https://git-lfs.com). Run: git lfs install
+Client/UGS[[:space:]]Files/** filter=lfs diff=lfs merge=lfs -text
