@@ -17,9 +17,8 @@ serviceAccountKey.json
 *-debug.log
 firebase-debug.log
 
-# Large game files (exceed GitHub 100MB limit)
-# Keep these locally but they won't be in the repo
-UGS Files/
+# Legacy UGS path at repo root (optional). Games live in Client/UGS Files now.
+/UGS Files/
 
 # OS files
 .DS_Store

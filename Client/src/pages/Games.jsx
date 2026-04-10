@@ -96,9 +96,8 @@ export default function Games() {
             <>
               <p>No games are available yet.</p>
               <p className="games-empty-hint">
-                An admin can add games in the Admin panel (Firestore), or deploy HTML games to the server&apos;s
-                <code> UGS Files </code>
-                folder for automatic listing.
+                Add HTML games under <code>Client/UGS Files</code> (served by the API server), or add entries in the
+                Admin panel with a full <code>https://</code> game URL.
               </p>
             </>
           ) : (

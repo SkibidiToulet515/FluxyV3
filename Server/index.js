@@ -15,6 +15,7 @@ import giphyRouter from './routes/giphy.js';
 import adminRouter from './routes/admin.js';
 import authResolveRouter from './routes/authResolve.js';
 import { initFirebase } from './config/firebase.js';
+import { UGS_DIR } from './config/paths.js';
 
 initFirebase();
 
@@ -58,9 +59,8 @@ const epoxyTransportPath = path.resolve(
 );
 app.use('/epoxy/', express.static(epoxyTransportPath));
 
-// --- Game files ---
-const ugsPath = path.resolve(import.meta.dirname, '..', 'UGS Files');
-app.use('/games', express.static(ugsPath));
+// --- Game files (see Server/config/paths.js — prefers Client/UGS Files) ---
+app.use('/games', express.static(UGS_DIR));
 
 // --- API routes ---
 app.use('/api/auth', authResolveRouter);

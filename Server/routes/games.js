@@ -1,9 +1,7 @@
 import express from 'express';
 import fs from 'fs/promises';
-import path from 'path';
 import { getAdminFirestore, isFirebaseAdminReady } from '../config/firebase.js';
-
-const UGS_DIR = path.resolve(import.meta.dirname, '..', '..', 'UGS Files');
+import { UGS_DIR } from '../config/paths.js';
 
 /** @type {{ at: number, data: Array<{ id: string, name: string, file: string, category: string, playUrl?: string | null }> } | null} */
 let mergedCache = null;
