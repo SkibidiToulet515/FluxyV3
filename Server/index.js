@@ -15,7 +15,8 @@ import giphyRouter from './routes/giphy.js';
 import adminRouter from './routes/admin.js';
 import authResolveRouter from './routes/authResolve.js';
 import { initFirebase } from './config/firebase.js';
-import { UGS_DIR } from './config/paths.js';
+import { REPO_ROOT, UGS_DIR } from './config/paths.js';
+import { lfsPointerGamesMiddleware } from './middleware/lfsPointerGames.js';
 
 initFirebase();
 
@@ -60,6 +61,8 @@ const epoxyTransportPath = path.resolve(
 app.use('/epoxy/', express.static(epoxyTransportPath));
 
 // --- Game files (see Server/config/paths.js — prefers Client/UGS Files) ---
+// Resolve Git LFS pointer stubs to blobs in .git/lfs/objects when present
+app.use('/games', lfsPointerGamesMiddleware(UGS_DIR, REPO_ROOT));
 app.use('/games', express.static(UGS_DIR));
 
 // --- API routes ---

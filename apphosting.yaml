@@ -11,9 +11,9 @@ runConfig:
   memoryMiB: 1024
 
 scripts:
-  # Cloud Build often has no `git-lfs`; a bare `git lfs pull` fails the whole build. If `git-lfs`
-  # exists, hydrate LFS files; otherwise continue (UGS may be pointer stubs — use https game URLs in Firestore).
-  buildCommand: 'sh -c "if command -v git-lfs >/dev/null 2>&1; then git lfs install && (git lfs pull || true); fi; npm ci --prefix Server"'
+  # Hydrate Git LFS: without this, `Client/UGS Files/*.html` stay as pointer text and games break.
+  # Debian/Ubuntu-based builders get git-lfs via apt; others must include git-lfs in the image.
+  buildCommand: 'sh -c "if ! command -v git-lfs >/dev/null 2>&1 && command -v apt-get >/dev/null 2>&1; then apt-get update -qq && apt-get install -y -qq git-lfs; fi; git lfs install && git lfs pull && npm ci --prefix Server"'
   runCommand: node Server/index.js
 
 # Keep the full monorepo tree (especially Client/UGS Files) in the runtime image.
