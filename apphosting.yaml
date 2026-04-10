@@ -1,0 +1,21 @@
+# Firebase App Hosting — Fluxy API (Express)
+#
+# IMPORTANT: In Firebase Console → App Hosting → your backend → Settings,
+# set "Root directory" to the repository root:  /  or  .  (NOT "Server").
+# That way the container includes Client/UGS Files for /games and /api/games.
+#
+# After changing root directory, push to main (or trigger a rollout).
+
+runConfig:
+  cpu: 1
+  memoryMiB: 1024
+
+scripts:
+  buildCommand: npm ci --prefix Server
+  runCommand: node Server/index.js
+
+# Keep the full monorepo tree (especially Client/UGS Files) in the runtime image.
+outputFiles:
+  serverApp:
+    include:
+      - "."
