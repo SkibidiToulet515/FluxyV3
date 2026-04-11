@@ -5,9 +5,6 @@ import { fetchGames } from '../utils/api';
 import { getGamePlaySrc } from '../utils/gamePlayUrl';
 import './GamePlayer.css';
 
-const GAME_NATIVE_W = 960;
-const GAME_NATIVE_H = 540;
-
 export default function GamePlayer() {
   const { gameId } = useParams();
   const navigate = useNavigate();
@@ -15,26 +12,6 @@ export default function GamePlayer() {
   const [isFs, setIsFs] = useState(false);
   const [loading, setLoading] = useState(true);
   const containerRef = useRef(null);
-  const iframeRef = useRef(null);
-
-  const scaleIframe = useCallback(() => {
-    const container = iframeRef.current?.parentElement;
-    const iframe = iframeRef.current;
-    if (!container || !iframe) return;
-
-    const cw = container.clientWidth;
-    const ch = container.clientHeight;
-    if (!cw || !ch) return;
-
-    const scale = Math.min(cw / GAME_NATIVE_W, ch / GAME_NATIVE_H);
-    iframe.style.width = `${GAME_NATIVE_W}px`;
-    iframe.style.height = `${GAME_NATIVE_H}px`;
-    iframe.style.transform = `scale(${scale})`;
-    iframe.style.transformOrigin = 'top left';
-    iframe.style.position = 'absolute';
-    iframe.style.top = `${(ch - GAME_NATIVE_H * scale) / 2}px`;
-    iframe.style.left = `${(cw - GAME_NATIVE_W * scale) / 2}px`;
-  }, []);
 
   useEffect(() => {
     fetchGames()
@@ -46,18 +23,10 @@ export default function GamePlayer() {
   useEffect(() => {
     function onFsChange() {
       setIsFs(Boolean(document.fullscreenElement));
-      requestAnimationFrame(scaleIframe);
     }
     document.addEventListener('fullscreenchange', onFsChange);
     return () => document.removeEventListener('fullscreenchange', onFsChange);
-  }, [scaleIframe]);
-
-  useEffect(() => {
-    if (!game) return;
-    scaleIframe();
-    window.addEventListener('resize', scaleIframe);
-    return () => window.removeEventListener('resize', scaleIframe);
-  }, [game, scaleIframe]);
+  }, []);
 
   const toggleFullscreen = useCallback(() => {
     if (!containerRef.current) return;
@@ -112,14 +81,11 @@ export default function GamePlayer() {
       </div>
       <div className="game-player-frame-container">
         <iframe
-          ref={iframeRef}
           src={gameUrl}
           className="game-player-iframe"
           title={game.name}
           sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals"
           allowFullScreen
-          scrolling="no"
-          onLoad={scaleIframe}
         />
       </div>
     </div>
