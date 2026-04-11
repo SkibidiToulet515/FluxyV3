@@ -1,3 +1,4 @@
-# Copied from UGS Files on each `npm run build` (see scripts/syncUgsToPublic.mjs)
-public/games/*
-!public/games/.gitkeep
+# UGS game HTML is copied into public/games/ by prebuild (see scripts/syncUgsToPublic.mjs)
+public/games/*.html
+public/games/*.htm
+!public/games/404.html

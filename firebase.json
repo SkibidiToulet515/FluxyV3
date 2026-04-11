@@ -4,13 +4,30 @@
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
+        "source": "/games/**",
+        "destination": "/games/404.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
     ],
     "headers": [
       {
-        "source": "**/*.@(js|css|svg|png|jpg|gif|webp|ico)",
+        "source": "/games/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=3600"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "SAMEORIGIN"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(js|css|svg|png|jpg|gif|webp|ico|html)",
         "headers": [
           {
             "key": "Cache-Control",

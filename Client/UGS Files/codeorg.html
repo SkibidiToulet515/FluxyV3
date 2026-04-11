@@ -1,3 +1,16 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:c2e49ce37135e00c27c2099e7b8dc036865d155cd7d3461cfecfe60c75816537
-size 717
+<li>
+  <a href="javascript:(async()=>{
+           const res = await fetch('https://cdn.jsdelivr.net/gh/bubbls/ugs-singlefile@main/codeorn.html');
+           const text = await res.text();
+           const parser = new DOMParser();
+           const doc = parser.parseFromString(text, 'text/html');
+           const html = window.parent.document;
+           html.documentElement.innerHTML = doc.documentElement.innerHTML;
+           doc.querySelectorAll('script').forEach(s => {
+           const ns = html.createElement('script');
+           if (s.src) ns.src = s.src;
+           else ns.textContent = s.textContent;
+           html.body.appendChild(ns);
+           });
+           })()">Website</a>
+</li>

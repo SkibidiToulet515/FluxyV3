@@ -1,3 +1,20 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:84f791a8e6f4bba517a5ef448b425047dec56938b277e62d8e613241a67b15ae
-size 790
+<!-- Ultimate Game Stash file--> 
+<!-- For the regularly updating doc go to https://docs.google.com/document/d/1_FmH3BlSBQI7FGgAQL59-ZPe8eCxs35wel6JUyVaG8Q/ -->
+<!--this is a game where you build a creature and watch it evolve. Uses jsdelivr--!>
+
+<!DOCTYPE html>
+<html lang="en-us">
+<base href="https://cdn.jsdelivr.net/gh/Stinkalistic/UGS@main/UNITY/Evolution/">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Evolution</title>
+    <script src="Build/UnityLoader.js"></script>
+    <script>
+      var gameInstance = UnityLoader.instantiate("gameContainer", "Build/Evolution.json");
+    </script>
+  </head>
+  <body>
+    <div id="gameContainer" style="width: 960px; height: 600px; margin: auto"></div>
+  </body>
+</html>

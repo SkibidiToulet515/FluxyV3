@@ -1,6 +1,5 @@
-# Builds Client/dist (not in git) then deploys Firebase Hosting.
-# Add repo secret FIREBASE_SERVICE_ACCOUNT_FLUXYV3_PROD: Firebase Console →
-# Project settings → Service accounts → Generate new private key → paste JSON.
+# Builds Client/dist (including games from UGS Files) then deploys Firebase Hosting.
+# UGS files are normal git objects (not LFS) so no LFS quota is needed.
 name: Deploy Firebase Hosting
 on:
   push:
@@ -10,11 +9,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      # prebuild copies Client/UGS Files → public/games; needs REAL HTML on disk (not LFS pointers).
-      # Use lfs:true when GitHub LFS quota is OK. If LFS fetch fails, migrate UGS off LFS and use lfs:false.
       - uses: actions/checkout@v4
-        with:
-          lfs: true
       - uses: actions/setup-node@v4
         with:
           node-version: '20'

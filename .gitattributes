@@ -1,7 +1,14 @@
-# UGS HTML games — optional Git LFS. Recommended: store small HTML as normal git files (no LFS)
-# so CI/App Hosting never see pointer stubs. If you keep LFS, Firebase Hosting build uses
-# lfs:true and prebuild fails if pointers remain on disk.
-#
-# To drop LFS: remove the line below, run `git lfs pull`, then:
-#   git rm --cached -r "Client/UGS Files" && git add "Client/UGS Files" && git commit
-Client/UGS[[:space:]]Files/** filter=lfs diff=lfs merge=lfs -text
+# Only UGS HTML files over 50 MB use Git LFS (GitHub rejects >100 MB, warns >50 MB).
+# All other UGS games are normal git objects — no LFS quota needed for them.
+# NOTE: .gitattributes uses [[:space:]] for literal spaces in paths.
+Client/UGS[[:space:]]Files/clprecisionclient.html filter=lfs diff=lfs merge=lfs -text
+Client/UGS[[:space:]]Files/clundertale-gameboy(1).html filter=lfs diff=lfs merge=lfs -text
+Client/UGS[[:space:]]Files/clundertale-gameboy.html filter=lfs diff=lfs merge=lfs -text
+Client/UGS[[:space:]]Files/cleaglerforge.html filter=lfs diff=lfs merge=lfs -text
+Client/UGS[[:space:]]Files/cleaglerultimate.html filter=lfs diff=lfs merge=lfs -text
+Client/UGS[[:space:]]Files/clastraclient.html filter=lfs diff=lfs merge=lfs -text
+Client/UGS[[:space:]]Files/clexploremodpack.html filter=lfs diff=lfs merge=lfs -text
+Client/UGS[[:space:]]Files/cladifferentsnowgrave.html filter=lfs diff=lfs merge=lfs -text
+Client/UGS[[:space:]]Files/clastrawasm.html filter=lfs diff=lfs merge=lfs -text
+Client/UGS[[:space:]]Files/geometrydashlite.html filter=lfs diff=lfs merge=lfs -text
+Client/UGS[[:space:]]Files/clHil[[:space:]]ClimbRacing2.html filter=lfs diff=lfs merge=lfs -text

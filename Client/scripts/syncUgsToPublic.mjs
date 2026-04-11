@@ -25,8 +25,11 @@ function readHeadIsLfsPointer(absPath) {
   }
 }
 
+const KEEP_FILES = new Set(['404.html', '.gitkeep']);
+
 fs.mkdirSync(outDir, { recursive: true });
 for (const name of fs.readdirSync(outDir)) {
+  if (KEEP_FILES.has(name)) continue;
   fs.unlinkSync(path.join(outDir, name));
 }
 
