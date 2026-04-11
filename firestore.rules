@@ -41,10 +41,6 @@ service cloud.firestore {
       return hasPerm('assign_low_roles') || hasLegacyRoleMgmt();
     }
 
-    /**
-     * Tier used for role-change / ban rules. If the definition doc is missing, use safe
-     * fallbacks: unknown keys default to high so assign_low cannot grant mystery roles.
-     */
     function roleDefTierOf(roleKey) {
       let path = /databases/$(database)/documents/roleDefinitions/$(roleKey);
       return exists(path)
@@ -73,18 +69,19 @@ service cloud.firestore {
       return hasPerm('moderate_chat') || hasPerm('access_moderator_panel');
     }
 
-    // Role definitions: client read-only — all writes go through the API (Admin SDK) so
-    // permission grants cannot be forged from the client.
+    // ─── Role Definitions ─────────────────────────────────────────────
     match /roleDefinitions/{key} {
       allow read: if isAuth();
       allow create, update, delete: if false;
     }
 
+    // ─── Moderation Logs ──────────────────────────────────────────────
     match /moderationLogs/{logId} {
       allow read: if hasPerm('access_moderator_panel');
       allow write: if false;
     }
 
+    // ─── Reports ──────────────────────────────────────────────────────
     match /reports/{reportId} {
       allow create: if isAuth()
         && request.resource.data.reporterUid == request.auth.uid
@@ -94,18 +91,18 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ─── Users ────────────────────────────────────────────────────────
     match /users/{uid} {
       allow read: if isAuth();
       allow create: if isOwner(uid)
         && request.resource.data.role == 'user';
-      // Self-updates: must keep all critical fields intact (prevents .set() without merge)
+
       allow update: if isOwner(uid)
         && !request.resource.data.diff(resource.data).affectedKeys()
           .hasAny(['role', 'banned', 'warnings', 'mutedUntil', 'chatRestricted', 'moderationNote'])
         && request.resource.data.role == resource.data.role
         && request.resource.data.keys().hasAll(['role', 'username', 'email']);
 
-      // Role changes: Owner touches vs high vs low tier (legacy manage_roles counts as both assigns)
       allow update: if isAuth() && request.auth.uid != uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role'])
         && (
@@ -123,6 +120,7 @@ service cloud.firestore {
           roleDefTierOf(targetUserRoleKey(uid)) != 'owner'
           || hasPerm('protect_owner')
         );
+
       allow update: if isAuth() && request.auth.uid != uid && hasPerm('manage_users')
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['warnings', 'mutedUntil', 'chatRestricted', 'moderationNote'])
@@ -130,41 +128,75 @@ service cloud.firestore {
           roleDefTierOf(targetUserRoleKey(uid)) != 'owner'
           || hasPerm('protect_owner')
         );
+
       allow delete: if false;
     }
 
+    // ─── Friends ──────────────────────────────────────────────────────
     match /friends/{docId} {
       allow read: if isAuth() && request.auth.uid in resource.data.users;
-      allow create: if isAuth() && request.auth.uid in request.resource.data.users;
+      allow create: if isAuth() && request.auth.uid in request.resource.data.users
+        && request.resource.data.users.size() == 2
+        && request.resource.data.status == 'pending'
+        && request.resource.data.from == request.auth.uid;
       allow update: if isAuth() && request.auth.uid in resource.data.users;
       allow delete: if isAuth() && request.auth.uid in resource.data.users;
     }
 
+    // ─── Direct Messages ──────────────────────────────────────────────
     match /directMessages/{channelId} {
       allow read: if isAuth() && request.auth.uid in resource.data.participants;
-      allow create: if isAuth() && request.auth.uid in request.resource.data.participants;
+      allow create: if isAuth() && request.auth.uid in request.resource.data.participants
+        && request.resource.data.participants.size() == 2;
+      allow update: if isAuth() && request.auth.uid in resource.data.participants;
 
       match /messages/{msgId} {
         allow read: if isAuth();
-        allow create: if isAuth();
+        allow create: if isAuth()
+          && request.resource.data.senderUid == request.auth.uid;
         allow delete: if hasPerm('moderate_chat');
       }
     }
 
+    // ─── Group Chats ──────────────────────────────────────────────────
+    match /groupChats/{groupId} {
+      allow read: if isAuth() && request.auth.uid in resource.data.members;
+      allow create: if isAuth()
+        && request.auth.uid == request.resource.data.owner
+        && request.auth.uid in request.resource.data.members;
+      allow update: if isAuth() && request.auth.uid in resource.data.members;
+      allow delete: if isAuth() && request.auth.uid == resource.data.owner;
+
+      match /messages/{msgId} {
+        allow read: if isAuth();
+        allow create: if isAuth()
+          && request.resource.data.senderUid == request.auth.uid;
+        allow delete: if hasPerm('moderate_chat');
+      }
+    }
+
+    // ─── Servers ──────────────────────────────────────────────────────
     match /servers/{serverId} {
       allow read: if isAuth();
-      allow create: if isAuth();
+      allow create: if isAuth()
+        && request.auth.uid == request.resource.data.owner
+        && request.auth.uid in request.resource.data.members;
       allow update: if isAuth()
-        && (request.auth.uid == resource.data.owner || isMod());
-      allow delete: if isAdmin();
+        && (request.auth.uid == resource.data.owner
+          || request.auth.uid in resource.data.members
+          || isMod());
+      allow delete: if isAdmin()
+        || (isAuth() && request.auth.uid == resource.data.owner);
 
       match /channels/{channelId}/messages/{msgId} {
         allow read: if isAuth();
-        allow create: if isAuth();
+        allow create: if isAuth()
+          && request.resource.data.senderUid == request.auth.uid;
         allow delete: if hasPerm('moderate_chat');
       }
     }
 
+    // ─── Games ────────────────────────────────────────────────────────
     match /games/{gameId} {
       allow read: if true;
       allow create, update: if hasPerm('manage_games');

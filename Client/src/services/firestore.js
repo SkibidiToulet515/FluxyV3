@@ -1,8 +1,8 @@
 import {
-  doc, getDoc, setDoc, updateDoc, deleteDoc,
-  collection, query, where, orderBy, limit,
+  doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField,
+  collection, query, where, orderBy, limit, startAfter, limitToLast,
   getDocs, onSnapshot, serverTimestamp, arrayUnion, arrayRemove,
-  addDoc, Timestamp,
+  addDoc, Timestamp, writeBatch, increment,
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { uploadGameFile, deleteGameFileByPath } from './storage';
@@ -36,6 +36,18 @@ export async function getUserByUsername(username) {
   return { uid: d.id, ...d.data() };
 }
 
+export async function searchUsers(searchTerm, maxResults = 20) {
+  const lower = searchTerm.toLowerCase();
+  const q = query(
+    collection(db, 'users'),
+    where('usernameLower', '>=', lower),
+    where('usernameLower', '<=', lower + '\uf8ff'),
+    limit(maxResults),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+}
+
 export async function updateUserDoc(uid, fields) {
   await updateDoc(doc(db, 'users', uid), fields);
 }
@@ -48,18 +60,42 @@ export function subscribeUser(uid, callback) {
 
 // ─── Friends ──────────────────────────────────────────────────────────────────
 
+function friendDocId(uid1, uid2) {
+  return [uid1, uid2].sort().join('_');
+}
+
 export async function sendFriendRequest(fromUid, toUid) {
-  const id = [fromUid, toUid].sort().join('_');
-  await setDoc(doc(db, 'friends', id), {
+  if (fromUid === toUid) throw new Error('Cannot friend yourself');
+  const id = friendDocId(fromUid, toUid);
+  const ref = doc(db, 'friends', id);
+  const existing = await getDoc(ref);
+  if (existing.exists()) {
+    const data = existing.data();
+    if (data.status === 'accepted') throw new Error('Already friends');
+    if (data.status === 'pending') throw new Error('Request already pending');
+  }
+  await setDoc(ref, {
     users: [fromUid, toUid],
     status: 'pending',
     from: fromUid,
+    to: toUid,
     createdAt: serverTimestamp(),
   });
 }
 
 export async function acceptFriendRequest(docId) {
-  await updateDoc(doc(db, 'friends', docId), { status: 'accepted' });
+  await updateDoc(doc(db, 'friends', docId), {
+    status: 'accepted',
+    acceptedAt: serverTimestamp(),
+  });
+}
+
+export async function declineFriendRequest(docId) {
+  await deleteDoc(doc(db, 'friends', docId));
+}
+
+export async function cancelFriendRequest(docId) {
+  await deleteDoc(doc(db, 'friends', docId));
 }
 
 export async function removeFriend(docId) {
@@ -99,37 +135,165 @@ export async function ensureDmChannel(uid1, uid2) {
   const ref = doc(db, 'directMessages', id);
   const snap = await getDoc(ref);
   if (!snap.exists()) {
-    await setDoc(ref, { participants: [uid1, uid2], createdAt: serverTimestamp() });
+    await setDoc(ref, {
+      participants: [uid1, uid2],
+      lastMessage: null,
+      lastMessageAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+    });
   }
   return id;
 }
 
-export function subscribeDmMessages(channelId, callback, messageLimit = 100) {
+export function subscribeDmChannels(uid, callback) {
   const q = query(
-    collection(db, 'directMessages', channelId, 'messages'),
-    orderBy('createdAt', 'asc'),
-    limit(messageLimit),
+    collection(db, 'directMessages'),
+    where('participants', 'array-contains', uid),
+    orderBy('lastMessageAt', 'desc'),
   );
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   });
 }
 
-export async function sendDmMessage(channelId, msg) {
-  await addDoc(collection(db, 'directMessages', channelId, 'messages'), {
-    ...msg,
-    createdAt: serverTimestamp(),
+export function subscribeDmMessages(channelId, callback, messageLimit = 50) {
+  const q = query(
+    collection(db, 'directMessages', channelId, 'messages'),
+    orderBy('createdAt', 'desc'),
+    limit(messageLimit),
+  );
+  return onSnapshot(q, (snap) => {
+    const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    callback(msgs.reverse());
   });
 }
 
-// ─── Servers (Group Chats) ────────────────────────────────────────────────────
+export async function loadOlderDmMessages(channelId, beforeDoc, count = 30) {
+  const q = query(
+    collection(db, 'directMessages', channelId, 'messages'),
+    orderBy('createdAt', 'desc'),
+    startAfter(beforeDoc),
+    limit(count),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+}
+
+export async function sendDmMessage(channelId, msg) {
+  const messageData = {
+    ...msg,
+    senderUid: auth.currentUser.uid,
+    createdAt: serverTimestamp(),
+  };
+  const msgRef = await addDoc(
+    collection(db, 'directMessages', channelId, 'messages'),
+    messageData,
+  );
+  await updateDoc(doc(db, 'directMessages', channelId), {
+    lastMessage: msg.text || (msg.gif ? 'GIF' : (msg.attachment ? 'File' : '')),
+    lastMessageAt: serverTimestamp(),
+    lastSenderUid: auth.currentUser.uid,
+  });
+  return msgRef.id;
+}
+
+// ─── Group Chats ──────────────────────────────────────────────────────────────
+
+export async function createGroupChat(data) {
+  const uid = auth.currentUser.uid;
+  const ref = await addDoc(collection(db, 'groupChats'), {
+    name: data.name,
+    icon: data.icon || null,
+    owner: uid,
+    members: [uid, ...(data.members || [])],
+    lastMessage: null,
+    lastMessageAt: serverTimestamp(),
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export function subscribeGroupChats(uid, callback) {
+  const q = query(
+    collection(db, 'groupChats'),
+    where('members', 'array-contains', uid),
+    orderBy('lastMessageAt', 'desc'),
+  );
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
+}
+
+export async function updateGroupChat(groupId, fields) {
+  await updateDoc(doc(db, 'groupChats', groupId), fields);
+}
+
+export async function addGroupMember(groupId, uid) {
+  await updateDoc(doc(db, 'groupChats', groupId), {
+    members: arrayUnion(uid),
+  });
+}
+
+export async function removeGroupMember(groupId, uid) {
+  await updateDoc(doc(db, 'groupChats', groupId), {
+    members: arrayRemove(uid),
+  });
+}
+
+export async function leaveGroupChat(groupId, uid) {
+  await removeGroupMember(groupId, uid);
+}
+
+export function subscribeGroupMessages(groupId, callback, messageLimit = 50) {
+  const q = query(
+    collection(db, 'groupChats', groupId, 'messages'),
+    orderBy('createdAt', 'desc'),
+    limit(messageLimit),
+  );
+  return onSnapshot(q, (snap) => {
+    const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    callback(msgs.reverse());
+  });
+}
+
+export async function loadOlderGroupMessages(groupId, beforeDoc, count = 30) {
+  const q = query(
+    collection(db, 'groupChats', groupId, 'messages'),
+    orderBy('createdAt', 'desc'),
+    startAfter(beforeDoc),
+    limit(count),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+}
+
+export async function sendGroupMessage(groupId, msg) {
+  const messageData = {
+    ...msg,
+    senderUid: auth.currentUser.uid,
+    createdAt: serverTimestamp(),
+  };
+  const msgRef = await addDoc(
+    collection(db, 'groupChats', groupId, 'messages'),
+    messageData,
+  );
+  await updateDoc(doc(db, 'groupChats', groupId), {
+    lastMessage: msg.text || (msg.gif ? 'GIF' : (msg.attachment ? 'File' : '')),
+    lastMessageAt: serverTimestamp(),
+    lastSenderUid: auth.currentUser.uid,
+  });
+  return msgRef.id;
+}
+
+// ─── Servers ──────────────────────────────────────────────────────────────────
 
 export async function createServer(data) {
+  const uid = auth.currentUser.uid;
   const ref = await addDoc(collection(db, 'servers'), {
     name: data.name,
     icon: data.icon || null,
-    owner: data.owner,
-    members: [data.owner],
+    owner: uid,
+    members: [uid],
     channels: [{ id: 'general', name: 'General' }],
     createdAt: serverTimestamp(),
   });
@@ -137,36 +301,70 @@ export async function createServer(data) {
 }
 
 export function subscribeServers(uid, callback) {
-  const q = query(collection(db, 'servers'), where('members', 'array-contains', uid));
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-  });
-}
-
-export async function joinServer(serverId, uid) {
-  await updateDoc(doc(db, 'servers', serverId), { members: arrayUnion(uid) });
-}
-
-export async function leaveServer(serverId, uid) {
-  await updateDoc(doc(db, 'servers', serverId), { members: arrayRemove(uid) });
-}
-
-export function subscribeServerMessages(serverId, channelId, callback, messageLimit = 150) {
   const q = query(
-    collection(db, 'servers', serverId, 'channels', channelId, 'messages'),
-    orderBy('createdAt', 'asc'),
-    limit(messageLimit),
+    collection(db, 'servers'),
+    where('members', 'array-contains', uid),
   );
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   });
 }
 
-export async function sendServerMessage(serverId, channelId, msg) {
-  await addDoc(collection(db, 'servers', serverId, 'channels', channelId, 'messages'), {
-    ...msg,
-    createdAt: serverTimestamp(),
+export async function updateServer(serverId, fields) {
+  await updateDoc(doc(db, 'servers', serverId), fields);
+}
+
+export async function joinServer(serverId, uid) {
+  await updateDoc(doc(db, 'servers', serverId), {
+    members: arrayUnion(uid),
   });
+}
+
+export async function leaveServer(serverId, uid) {
+  await updateDoc(doc(db, 'servers', serverId), {
+    members: arrayRemove(uid),
+  });
+}
+
+export async function addServerChannel(serverId, channel) {
+  await updateDoc(doc(db, 'servers', serverId), {
+    channels: arrayUnion(channel),
+  });
+}
+
+export function subscribeServerMessages(serverId, channelId, callback, messageLimit = 50) {
+  const q = query(
+    collection(db, 'servers', serverId, 'channels', channelId, 'messages'),
+    orderBy('createdAt', 'desc'),
+    limit(messageLimit),
+  );
+  return onSnapshot(q, (snap) => {
+    const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    callback(msgs.reverse());
+  });
+}
+
+export async function loadOlderServerMessages(serverId, channelId, beforeDoc, count = 30) {
+  const q = query(
+    collection(db, 'servers', serverId, 'channels', channelId, 'messages'),
+    orderBy('createdAt', 'desc'),
+    startAfter(beforeDoc),
+    limit(count),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+}
+
+export async function sendServerMessage(serverId, channelId, msg) {
+  const messageData = {
+    ...msg,
+    senderUid: auth.currentUser.uid,
+    createdAt: serverTimestamp(),
+  };
+  await addDoc(
+    collection(db, 'servers', serverId, 'channels', channelId, 'messages'),
+    messageData,
+  );
 }
 
 // ─── Game Metadata ────────────────────────────────────────────────────────────

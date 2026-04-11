@@ -3,7 +3,6 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Public read so games load in iframe; writes restricted to mod/admin (see Firestore users.role).
     function ugsGamesActorRole() {
       return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role;
     }
@@ -14,6 +13,7 @@ service firebase.storage {
         && firestore.get(/databases/(default)/documents/roleDefinitions/$(ugsGamesActorRole())).data.permissions.manage_games == true;
     }
 
+    // Game files (UGS)
     match /ugsgames/{gameId}/{fileName} {
       allow read: if true;
       allow delete: if ugsGamesCanManage();
@@ -26,7 +26,7 @@ service firebase.storage {
         );
     }
 
-    // Single path segment "uid.ext" (variable.{ext} is invalid in Storage rules syntax)
+    // Profile pictures
     match /avatars/{fileName} {
       allow read: if true;
       allow write: if request.auth != null
@@ -35,13 +35,30 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
     }
 
-    match /chat/{path=**} {
-      allow read: if request.auth != null;
+    // Server icons
+    match /serverIcons/{fileName} {
+      allow read: if true;
       allow write: if request.auth != null
-        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
 
+    // Group chat icons
+    match /groupIcons/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Chat attachments (images + documents in DMs, groups, servers)
+    match /chat/{path=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Game thumbnails
     match /thumbnails/{fileName} {
       allow read: if true;
       allow write: if request.auth != null
@@ -49,6 +66,7 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
     }
 
+    // General media
     match /media/{path=**} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
