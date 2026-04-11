@@ -2,7 +2,7 @@ import {
   doc, getDoc, setDoc, updateDoc, deleteDoc,
   collection, query, where, orderBy, limit, startAfter,
   getDocs, onSnapshot, serverTimestamp, arrayUnion, arrayRemove,
-  addDoc, increment,
+  addDoc, increment, runTransaction,
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { uploadGameFile, deleteGameFileByPath } from './storage';
@@ -69,27 +69,58 @@ export function subscribeUser(uid, callback) {
 
 // ─── Friends ──────────────────────────────────────────────────────────────────
 
-function friendDocId(uid1, uid2) {
-  return [uid1, uid2].sort().join('_');
-}
-
-export async function sendFriendRequest(fromUid, toUid) {
+/**
+ * Create a pending friend request. Uses the signed-in user as sender (not the caller arg)
+ * so Firestore rules always match `request.auth.uid == from`.
+ *
+ * Uses a transaction so legacy / malformed `friends/{uid_uid}` docs (anything other than
+ * accepted or pending) are deleted first — otherwise `setDoc` would be an `update`, which
+ * rules only allow for "accept", and would return permission-denied.
+ */
+export async function sendFriendRequest(_fromUid, toUid) {
+  const fromUid = auth.currentUser?.uid;
+  if (!fromUid) throw new Error('Sign in required');
   if (fromUid === toUid) throw new Error('Cannot friend yourself');
-  const id = friendDocId(fromUid, toUid);
+
+  const pair = [fromUid, toUid].slice().sort();
+  const id = pair.join('_');
   const ref = doc(db, 'friends', id);
-  const existing = await getDoc(ref);
-  if (existing.exists()) {
-    const data = existing.data();
-    if (data.status === 'accepted') throw new Error('Already friends');
-    if (data.status === 'pending') throw new Error('Request already pending');
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(ref);
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.status === 'accepted') {
+          throw new Error('Already friends');
+        }
+        if (data.status === 'pending') {
+          throw new Error('Request already pending');
+        }
+        const users = Array.isArray(data.users) ? data.users : [];
+        if (!users.includes(fromUid)) {
+          throw new Error(
+            'A friend record for this pair exists but cannot be updated. Contact support.',
+          );
+        }
+        transaction.delete(ref);
+      }
+      transaction.set(ref, {
+        users: pair,
+        status: 'pending',
+        from: fromUid,
+        to: toUid,
+        createdAt: serverTimestamp(),
+      });
+    });
+  } catch (err) {
+    if (err?.code === 'permission-denied') {
+      throw new Error(
+        'Could not send friend request (permission denied). Deploy the latest firestore.rules to Firebase, confirm you are signed in, then try again.',
+      );
+    }
+    throw err;
   }
-  await setDoc(ref, {
-    users: [fromUid, toUid],
-    status: 'pending',
-    from: fromUid,
-    to: toUid,
-    createdAt: serverTimestamp(),
-  });
 }
 
 export async function acceptFriendRequest(docId) {
