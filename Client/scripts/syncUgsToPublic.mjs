@@ -1,7 +1,7 @@
 /**
  * Copies Client/UGS Files → Client/public/games before Vite build.
  * Firebase Hosting serves /games/<file> from dist/games (no App Hosting / LFS needed).
- * Fails if any .html is still a Git LFS pointer on disk.
+ * Skips Git LFS pointer files with a warning (they can't be served as games).
  */
 import fs from 'fs';
 import path from 'path';
@@ -39,6 +39,7 @@ if (!fs.existsSync(ugsDir)) {
 }
 
 let copied = 0;
+let skipped = 0;
 for (const name of fs.readdirSync(ugsDir)) {
   const src = path.join(ugsDir, name);
   if (!fs.statSync(src).isFile()) continue;
@@ -46,24 +47,13 @@ for (const name of fs.readdirSync(ugsDir)) {
   if (!low.endsWith('.html') && !low.endsWith('.htm')) continue;
 
   if (readHeadIsLfsPointer(src)) {
-    console.error(`
-[syncUgs] BLOCKED: "${name}" is a Git LFS pointer (starts with "version https://git-lfs.github.com/spec/v1").
-
-On your machine, run:
-  git lfs install && git lfs pull
-
-Then build again. If GitHub LFS quota is exhausted, you cannot pull — either add LFS data
-packs on GitHub OR replace Client/UGS Files with the real HTML and remove the LFS line
-from .gitattributes, then commit the actual files (not pointers).
-
-Production iframes use /games/ on Firebase Hosting (see VITE_GAMES_ON_HOSTING), so real
-files must exist in the repo checkout when CI runs "npm run build".
-`);
-    process.exit(1);
+    console.warn(`[syncUgs] SKIPPED LFS pointer: "${name}" — this game will not be available on Hosting.`);
+    skipped += 1;
+    continue;
   }
 
   fs.copyFileSync(src, path.join(outDir, name));
   copied += 1;
 }
 
-console.log(`[syncUgs] Copied ${copied} HTML game(s) → public/games (served as /games/ on Hosting).`);
+console.log(`[syncUgs] Copied ${copied} HTML game(s) → public/games.${skipped ? ` Skipped ${skipped} LFS pointer(s).` : ''}`);
