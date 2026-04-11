@@ -31,9 +31,11 @@ function loadCredential() {
 export function initFirebase() {
   if (initialized) return;
 
-  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const projectId = process.env.FIREBASE_PROJECT_ID
+    || process.env.GOOGLE_CLOUD_PROJECT
+    || process.env.GCLOUD_PROJECT;
   if (!projectId) {
-    console.warn('[Firebase Admin] FIREBASE_PROJECT_ID not set — admin features disabled.');
+    console.warn('[Firebase Admin] No project ID found (FIREBASE_PROJECT_ID / GOOGLE_CLOUD_PROJECT) — admin features disabled.');
     return;
   }
 

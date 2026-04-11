@@ -7,6 +7,12 @@ runConfig:
   cpu: 1
   memoryMiB: 1024
 
+env:
+  - variable: FIREBASE_PROJECT_ID
+    value: fluxyv3-prod
+  - variable: CLIENT_ORIGIN
+    value: https://fluxyv3-prod.web.app,https://fluxyv3-prod.firebaseapp.com
+
 scripts:
   buildCommand: npm ci --prefix Server
   runCommand: node Server/index.js
