@@ -1,11 +1,14 @@
 import {
-  doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField,
-  collection, query, where, orderBy, limit, startAfter, limitToLast,
+  doc, getDoc, setDoc, updateDoc, deleteDoc,
+  collection, query, where, orderBy, limit, startAfter,
   getDocs, onSnapshot, serverTimestamp, arrayUnion, arrayRemove,
-  addDoc, Timestamp, writeBatch, increment,
+  addDoc,
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { uploadGameFile, deleteGameFileByPath } from './storage';
+
+/** Newest page size for realtime listeners; older pages use the same batch size. */
+export const CHAT_PAGE_SIZE = 50;
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
@@ -156,27 +159,43 @@ export function subscribeDmChannels(uid, callback) {
   });
 }
 
-export function subscribeDmMessages(channelId, callback, messageLimit = 50) {
+/**
+ * Realtime: newest `messageLimit` messages only (desc query, reversed to chronological).
+ * meta.oldestLiveDoc: cursor for loadOlder* (chronologically oldest on this page).
+ * meta.isFullPage: if true, older messages may exist before oldestLiveDoc.
+ */
+export function subscribeDmMessages(channelId, callback, messageLimit = CHAT_PAGE_SIZE) {
   const q = query(
     collection(db, 'directMessages', channelId, 'messages'),
     orderBy('createdAt', 'desc'),
     limit(messageLimit),
   );
   return onSnapshot(q, (snap) => {
-    const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    callback(msgs.reverse());
+    const docs = snap.docs;
+    const msgs = docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+    const oldestLiveDoc = docs.length ? docs[docs.length - 1] : null;
+    callback(msgs, {
+      oldestLiveDoc,
+      isFullPage: docs.length === messageLimit,
+    });
   });
 }
 
-export async function loadOlderDmMessages(channelId, beforeDoc, count = 30) {
+/** Load older messages before `cursorDoc` (QueryDocumentSnapshot of current oldest loaded). */
+export async function loadOlderDmMessages(channelId, cursorDoc, batchSize = CHAT_PAGE_SIZE) {
+  if (!cursorDoc) return { messages: [], oldestDocSnap: null, fetchedCount: 0 };
   const q = query(
     collection(db, 'directMessages', channelId, 'messages'),
     orderBy('createdAt', 'desc'),
-    startAfter(beforeDoc),
-    limit(count),
+    startAfter(cursorDoc),
+    limit(batchSize),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+  if (snap.empty) return { messages: [], oldestDocSnap: null, fetchedCount: 0 };
+  const docs = snap.docs;
+  const messages = docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+  const oldestDocSnap = docs[docs.length - 1];
+  return { messages, oldestDocSnap, fetchedCount: docs.length };
 }
 
 export async function sendDmMessage(channelId, msg) {
@@ -244,27 +263,37 @@ export async function leaveGroupChat(groupId, uid) {
   await removeGroupMember(groupId, uid);
 }
 
-export function subscribeGroupMessages(groupId, callback, messageLimit = 50) {
+export function subscribeGroupMessages(groupId, callback, messageLimit = CHAT_PAGE_SIZE) {
   const q = query(
     collection(db, 'groupChats', groupId, 'messages'),
     orderBy('createdAt', 'desc'),
     limit(messageLimit),
   );
   return onSnapshot(q, (snap) => {
-    const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    callback(msgs.reverse());
+    const docs = snap.docs;
+    const msgs = docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+    const oldestLiveDoc = docs.length ? docs[docs.length - 1] : null;
+    callback(msgs, {
+      oldestLiveDoc,
+      isFullPage: docs.length === messageLimit,
+    });
   });
 }
 
-export async function loadOlderGroupMessages(groupId, beforeDoc, count = 30) {
+export async function loadOlderGroupMessages(groupId, cursorDoc, batchSize = CHAT_PAGE_SIZE) {
+  if (!cursorDoc) return { messages: [], oldestDocSnap: null, fetchedCount: 0 };
   const q = query(
     collection(db, 'groupChats', groupId, 'messages'),
     orderBy('createdAt', 'desc'),
-    startAfter(beforeDoc),
-    limit(count),
+    startAfter(cursorDoc),
+    limit(batchSize),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+  if (snap.empty) return { messages: [], oldestDocSnap: null, fetchedCount: 0 };
+  const docs = snap.docs;
+  const messages = docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+  const oldestDocSnap = docs[docs.length - 1];
+  return { messages, oldestDocSnap, fetchedCount: docs.length };
 }
 
 export async function sendGroupMessage(groupId, msg) {
@@ -332,27 +361,37 @@ export async function addServerChannel(serverId, channel) {
   });
 }
 
-export function subscribeServerMessages(serverId, channelId, callback, messageLimit = 50) {
+export function subscribeServerMessages(serverId, channelId, callback, messageLimit = CHAT_PAGE_SIZE) {
   const q = query(
     collection(db, 'servers', serverId, 'channels', channelId, 'messages'),
     orderBy('createdAt', 'desc'),
     limit(messageLimit),
   );
   return onSnapshot(q, (snap) => {
-    const msgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    callback(msgs.reverse());
+    const docs = snap.docs;
+    const msgs = docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+    const oldestLiveDoc = docs.length ? docs[docs.length - 1] : null;
+    callback(msgs, {
+      oldestLiveDoc,
+      isFullPage: docs.length === messageLimit,
+    });
   });
 }
 
-export async function loadOlderServerMessages(serverId, channelId, beforeDoc, count = 30) {
+export async function loadOlderServerMessages(serverId, channelId, cursorDoc, batchSize = CHAT_PAGE_SIZE) {
+  if (!cursorDoc) return { messages: [], oldestDocSnap: null, fetchedCount: 0 };
   const q = query(
     collection(db, 'servers', serverId, 'channels', channelId, 'messages'),
     orderBy('createdAt', 'desc'),
-    startAfter(beforeDoc),
-    limit(count),
+    startAfter(cursorDoc),
+    limit(batchSize),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+  if (snap.empty) return { messages: [], oldestDocSnap: null, fetchedCount: 0 };
+  const docs = snap.docs;
+  const messages = docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
+  const oldestDocSnap = docs[docs.length - 1];
+  return { messages, oldestDocSnap, fetchedCount: docs.length };
 }
 
 export async function sendServerMessage(serverId, channelId, msg) {

@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '../utils/AuthContext';
-import { LogOut, Circle, Settings, Plus, Users, MessageSquare, UserPlus } from 'lucide-react';
+import { LogOut, Circle, Settings } from 'lucide-react';
 import ServerSidebar from '../components/chat/ServerSidebar';
 import ChatSidebar from '../components/chat/ChatSidebar';
 import ChatWindow from '../components/chat/ChatWindow';
@@ -12,6 +12,8 @@ import {
   subscribeDmMessages, subscribeGroupMessages,
   sendDmMessage, sendGroupMessage, sendServerMessage,
   getUserDoc,
+  loadOlderDmMessages, loadOlderGroupMessages, loadOlderServerMessages,
+  CHAT_PAGE_SIZE,
 } from '../services/firestore';
 import './Chat.css';
 
@@ -27,12 +29,29 @@ const VIEW_DM = 'dm';
 const VIEW_GROUP = 'group';
 const VIEW_SERVER = 'server';
 
+function mergeMessageLists(older, live) {
+  const seen = new Set();
+  const out = [];
+  for (const m of older) {
+    if (m?.id && !seen.has(m.id)) {
+      seen.add(m.id);
+      out.push(m);
+    }
+  }
+  for (const m of live) {
+    if (m?.id && !seen.has(m.id)) {
+      seen.add(m.id);
+      out.push(m);
+    }
+  }
+  return out;
+}
+
 export default function Chat() {
   const { account, logout } = useAuth();
   const uid = account?.uid;
   const username = account?.username || 'Anonymous';
 
-  // Data subscriptions
   const [friends, setFriends] = useState([]);
   const [friendRequests, setFriendRequests] = useState([]);
   const [dmChannels, setDmChannels] = useState([]);
@@ -40,17 +59,30 @@ export default function Chat() {
   const [servers, setServers] = useState([]);
   const [userCache, setUserCache] = useState({});
 
-  // Navigation
   const [view, setView] = useState(VIEW_FRIENDS);
   const [activeServerId, setActiveServerId] = useState(null);
   const [activeChannelId, setActiveChannelId] = useState('general');
   const [activeDmId, setActiveDmId] = useState(null);
   const [activeGroupId, setActiveGroupId] = useState(null);
 
-  // Messages
-  const [messages, setMessages] = useState([]);
+  const [olderMessages, setOlderMessages] = useState([]);
+  const [liveMessages, setLiveMessages] = useState([]);
+  const [hasMoreOlder, setHasMoreOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
 
-  // Resolve usernames for DM partners
+  const olderRef = useRef([]);
+  const oldestCursorRef = useRef(null);
+  const loadOlderLockRef = useRef(false);
+
+  useEffect(() => {
+    olderRef.current = olderMessages;
+  }, [olderMessages]);
+
+  const messages = useMemo(
+    () => mergeMessageLists(olderMessages, liveMessages),
+    [olderMessages, liveMessages],
+  );
+
   const resolveUser = useCallback(async (targetUid) => {
     if (userCache[targetUid]) return userCache[targetUid];
     const u = await getUserDoc(targetUid);
@@ -58,7 +90,6 @@ export default function Chat() {
     return u;
   }, [userCache]);
 
-  // Subscribe to friends, friend requests, DMs, groups, servers
   useEffect(() => {
     if (!uid) return;
     const unsubs = [
@@ -71,7 +102,6 @@ export default function Chat() {
     return () => unsubs.forEach((u) => u());
   }, [uid]);
 
-  // Resolve DM partner usernames
   useEffect(() => {
     if (!uid) return;
     dmChannels.forEach((dm) => {
@@ -80,23 +110,73 @@ export default function Chat() {
     });
   }, [dmChannels, uid, userCache, resolveUser]);
 
-  // Subscribe to messages for active conversation
   useEffect(() => {
-    setMessages([]);
+    setOlderMessages([]);
+    setLiveMessages([]);
+    setHasMoreOlder(false);
+    oldestCursorRef.current = null;
     if (view === VIEW_FRIENDS) return;
 
     let unsub;
+    const onLive = (msgs, meta) => {
+      setLiveMessages(msgs);
+      if (olderRef.current.length === 0) {
+        oldestCursorRef.current = meta.oldestLiveDoc;
+        setHasMoreOlder(Boolean(meta.isFullPage && meta.oldestLiveDoc));
+      }
+    };
+
     if (view === VIEW_DM && activeDmId) {
-      unsub = subscribeDmMessages(activeDmId, setMessages);
+      unsub = subscribeDmMessages(activeDmId, onLive);
     } else if (view === VIEW_GROUP && activeGroupId) {
-      unsub = subscribeGroupMessages(activeGroupId, setMessages);
+      unsub = subscribeGroupMessages(activeGroupId, onLive);
     } else if (view === VIEW_SERVER && activeServerId && activeChannelId) {
-      unsub = subscribeServerMessages(activeServerId, activeChannelId, setMessages);
+      unsub = subscribeServerMessages(activeServerId, activeChannelId, onLive);
     }
     return () => unsub?.();
   }, [view, activeDmId, activeGroupId, activeServerId, activeChannelId]);
 
-  // Send message handler
+  const handleLoadOlder = useCallback(async () => {
+    if (loadOlderLockRef.current || loadingOlder || !hasMoreOlder) return;
+    const cursor = oldestCursorRef.current;
+    if (!cursor) {
+      setHasMoreOlder(false);
+      return;
+    }
+    loadOlderLockRef.current = true;
+    setLoadingOlder(true);
+    try {
+      let res;
+      if (view === VIEW_DM && activeDmId) {
+        res = await loadOlderDmMessages(activeDmId, cursor, CHAT_PAGE_SIZE);
+      } else if (view === VIEW_GROUP && activeGroupId) {
+        res = await loadOlderGroupMessages(activeGroupId, cursor, CHAT_PAGE_SIZE);
+      } else if (view === VIEW_SERVER && activeServerId && activeChannelId) {
+        res = await loadOlderServerMessages(activeServerId, activeChannelId, cursor, CHAT_PAGE_SIZE);
+      } else {
+        return;
+      }
+      if (!res.fetchedCount) {
+        setHasMoreOlder(false);
+        return;
+      }
+      setOlderMessages((prev) => [...res.messages, ...prev]);
+      oldestCursorRef.current = res.oldestDocSnap;
+      setHasMoreOlder(res.fetchedCount === CHAT_PAGE_SIZE);
+    } finally {
+      loadOlderLockRef.current = false;
+      setLoadingOlder(false);
+    }
+  }, [
+    loadingOlder,
+    hasMoreOlder,
+    view,
+    activeDmId,
+    activeGroupId,
+    activeServerId,
+    activeChannelId,
+  ]);
+
   const handleSend = useCallback(async (text) => {
     if (!text.trim()) return;
     const msg = { text: text.trim(), senderUsername: username };
@@ -109,7 +189,6 @@ export default function Chat() {
     }
   }, [view, activeDmId, activeGroupId, activeServerId, activeChannelId, username]);
 
-  // Send GIF handler
   const handleGif = useCallback(async ({ gif, text }) => {
     const msg = { text: text || '', gif, senderUsername: username };
     if (view === VIEW_DM && activeDmId) {
@@ -121,7 +200,6 @@ export default function Chat() {
     }
   }, [view, activeDmId, activeGroupId, activeServerId, activeChannelId, username]);
 
-  // Send attachment handler
   const handleAttachment = useCallback(async (attachment) => {
     const msg = { ...attachment, senderUsername: username };
     if (view === VIEW_DM && activeDmId) {
@@ -133,7 +211,6 @@ export default function Chat() {
     }
   }, [view, activeDmId, activeGroupId, activeServerId, activeChannelId, username]);
 
-  // Navigation handlers
   const handleOpenDm = useCallback((dmId) => {
     setView(VIEW_DM);
     setActiveDmId(dmId);
@@ -163,7 +240,6 @@ export default function Chat() {
     setActiveGroupId(null);
   }, []);
 
-  // Current conversation title
   const chatTitle = useMemo(() => {
     if (view === VIEW_DM && activeDmId) {
       const dm = dmChannels.find((d) => d.id === activeDmId);
@@ -226,7 +302,6 @@ export default function Chat() {
       ) : (
         <ChatWindow
           messages={messages}
-          currentUser={username}
           currentUid={uid}
           title={chatTitle}
           view={view}
@@ -238,6 +313,9 @@ export default function Chat() {
             view === VIEW_GROUP ? `group/${activeGroupId}` :
             `server/${activeServerId}/${activeChannelId}`
           }
+          hasMoreOlder={hasMoreOlder}
+          loadingOlder={loadingOlder}
+          onLoadOlder={handleLoadOlder}
         />
       )}
 
