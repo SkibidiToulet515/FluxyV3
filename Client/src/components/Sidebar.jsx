@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   Home, Gamepad2, MessageCircle, Settings, Globe,
-  ChevronLeft, ChevronRight, LogOut, Circle, ShieldAlert,
+  ChevronLeft, ChevronRight, LogOut, Circle, ShieldAlert, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../utils/AuthContext';
 import './Sidebar.css';
@@ -22,7 +22,9 @@ const STATUS_COLORS = {
 };
 
 export default function Sidebar({ collapsed, onToggle, account, onLogout }) {
-  const { isAdmin } = useAuth();
+  const { hasPermission } = useAuth();
+  const showMod = hasPermission('access_moderator_panel');
+  const showAdmin = hasPermission('access_admin_panel');
   const statusColor = STATUS_COLORS[account?.status || 'offline'];
 
   return (
@@ -58,7 +60,19 @@ export default function Sidebar({ collapsed, onToggle, account, onLogout }) {
               <span className="sidebar-label">{label}</span>
             </NavLink>
           ))}
-          {isAdmin && (
+          {showMod && (
+            <NavLink
+              to="/moderator"
+              className={({ isActive }) =>
+                `sidebar-link sidebar-link-mod ${isActive ? 'active' : ''}`
+              }
+              title={collapsed ? 'Moderator' : undefined}
+            >
+              <ShieldCheck size={20} />
+              <span className="sidebar-label">Moderator</span>
+            </NavLink>
+          )}
+          {showAdmin && (
             <NavLink
               to="/admin"
               className={({ isActive }) =>

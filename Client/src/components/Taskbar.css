@@ -41,5 +41,8 @@
   color: var(--accent);
 }
 
+.taskbar-link-mod { color: #fbbf24; }
+.taskbar-link-mod.active { color: #f59e0b; }
+
 .taskbar-link-admin { color: #f87171; }
 .taskbar-link-admin.active { color: #ef4444; }

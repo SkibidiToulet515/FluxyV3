@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Palette, Layout, User, Circle, Check, Zap, Shield, Wifi, Camera, Loader2, ShieldCheck } from 'lucide-react';
+import { Palette, Layout, User, Circle, Check, Zap, Shield, Wifi, Camera, Loader2, ShieldCheck, Flag } from 'lucide-react';
 import { useTheme } from '../themes/ThemeContext';
 import { useAuth } from '../utils/AuthContext';
 import { getLayoutMode, setLayoutMode } from '../utils/api';
@@ -11,6 +11,7 @@ import {
   checkProviderHealth,
 } from '../services/providers';
 import { uploadProfilePicture } from '../services/storage';
+import { submitUserReport } from '../services/firestore';
 import Header from '../components/Header';
 import './Settings.css';
 
@@ -197,6 +198,9 @@ function ProfileSection({ account }) {
   const [uploading, setUploading] = useState(false);
   const [bio, setBio] = useState(account.bio || '');
   const [bioSaved, setBioSaved] = useState(false);
+  const [reportText, setReportText] = useState('');
+  const [reportBusy, setReportBusy] = useState(false);
+  const [reportMsg, setReportMsg] = useState('');
 
   async function handleAvatarChange(e) {
     const file = e.target.files?.[0];
@@ -219,7 +223,21 @@ function ProfileSection({ account }) {
     setTimeout(() => setBioSaved(false), 2000);
   }
 
-  const ROLE_LABELS = { admin: 'Admin', mod: 'Moderator', user: 'Member' };
+  async function handleReportSubmit(e) {
+    e.preventDefault();
+    if (!reportText.trim()) return;
+    setReportBusy(true);
+    setReportMsg('');
+    try {
+      await submitUserReport({ reason: reportText.trim() });
+      setReportText('');
+      setReportMsg('Thanks — moderators will review your report.');
+    } catch (err) {
+      setReportMsg(err?.message || 'Could not send report.');
+    } finally {
+      setReportBusy(false);
+    }
+  }
 
   return (
     <section className="settings-section glass-card">
@@ -251,7 +269,7 @@ function ProfileSection({ account }) {
           {account.email && <span className="settings-profile-email">{account.email}</span>}
           <span className="settings-profile-role">
             <ShieldCheck size={13} />
-            {ROLE_LABELS[account.role] || 'Member'}
+            {account.roleDisplayName || account.role || 'Member'}
           </span>
         </div>
       </div>
@@ -271,6 +289,30 @@ function ProfileSection({ account }) {
             {bioSaved ? <><Check size={14} /> Saved</> : 'Save'}
           </button>
         </div>
+      </div>
+
+      <div className="settings-report glass-card" style={{ marginTop: '1rem', padding: '1rem' }}>
+        <div className="settings-section-header" style={{ marginBottom: '0.75rem' }}>
+          <Flag size={18} />
+          <div>
+            <h3 style={{ fontSize: '0.875rem' }}>Report an issue</h3>
+            <p style={{ fontSize: '0.7rem' }}>Send a report to the moderation team</p>
+          </div>
+        </div>
+        <form onSubmit={handleReportSubmit}>
+          <textarea
+            value={reportText}
+            onChange={(e) => setReportText(e.target.value)}
+            placeholder="Describe the problem (harassment, bugs, abuse…)"
+            rows={3}
+            maxLength={1000}
+            className="settings-report-textarea"
+          />
+          {reportMsg && <p className="settings-report-msg">{reportMsg}</p>}
+          <button type="submit" className="btn btn-primary btn-sm" disabled={reportBusy || !reportText.trim()}>
+            {reportBusy ? <Loader2 size={14} className="spin" /> : 'Submit report'}
+          </button>
+        </form>
       </div>
     </section>
   );

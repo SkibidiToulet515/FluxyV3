@@ -20,9 +20,17 @@ const STATUS_COLORS = {
   offline: '#52525b',
 };
 
+function isAccountMuted(account) {
+  if (!account?.mutedUntil) return false;
+  const m = account.mutedUntil;
+  if (typeof m.toMillis === 'function') return Date.now() < m.toMillis();
+  return false;
+}
+
 export default function Chat() {
   const { account, logout } = useAuth();
   const username = account?.username || 'Anonymous';
+  const chatSanctioned = account?.chatRestricted === true || isAccountMuted(account);
 
   const [messages, setMessages] = useState([]);
   const [connected, setConnected] = useState(false);
@@ -65,13 +73,19 @@ export default function Chat() {
   }, [channel]);
 
   const handleSend = useCallback(
-    (text) => { getSocket().emit('message', { text }); },
-    [],
+    (text) => {
+      if (chatSanctioned) return;
+      getSocket().emit('message', { text });
+    },
+    [chatSanctioned],
   );
 
   const handleGif = useCallback(
-    ({ gif, text }) => { getSocket().emit('message', { text: text || '', gif }); },
-    [],
+    ({ gif, text }) => {
+      if (chatSanctioned) return;
+      getSocket().emit('message', { text: text || '', gif });
+    },
+    [chatSanctioned],
   );
 
   const statusColor = STATUS_COLORS[account?.status || 'online'];
@@ -93,6 +107,14 @@ export default function Chat() {
         onSend={handleSend}
         onGif={handleGif}
         connected={connected}
+        inputDisabled={chatSanctioned}
+        sanctionMessage={
+          chatSanctioned
+            ? (account?.chatRestricted
+              ? 'Your account is restricted from sending chat messages.'
+              : 'You are temporarily muted and cannot send messages.')
+            : null
+        }
         onlineCount={onlineUsers.length}
       />
 

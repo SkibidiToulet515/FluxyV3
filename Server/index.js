@@ -13,11 +13,17 @@ import chatRouter, { recentMessages } from './routes/chat.js';
 import providersRouter from './routes/providers.js';
 import giphyRouter from './routes/giphy.js';
 import adminRouter from './routes/admin.js';
+import moderationRouter from './routes/moderation.js';
+import rolesRouter from './routes/roles.js';
 import authResolveRouter from './routes/authResolve.js';
-import { initFirebase } from './config/firebase.js';
+import { initFirebase, ensureDefaultRoleDefinitions } from './config/firebase.js';
 import { UGS_DIR } from './config/paths.js';
+import { ugsLfsGuard } from './middleware/ugsLfsGuard.js';
 
 initFirebase();
+ensureDefaultRoleDefinitions().catch((err) =>
+  console.error('[Firebase] ensureDefaultRoleDefinitions:', err?.message || err),
+);
 
 const PORT = Number(process.env.PORT) || 3000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
@@ -60,7 +66,7 @@ const epoxyTransportPath = path.resolve(
 app.use('/epoxy/', express.static(epoxyTransportPath));
 
 // --- Game files (see Server/config/paths.js — prefers Client/UGS Files) ---
-app.use('/games', express.static(UGS_DIR));
+app.use('/games', ugsLfsGuard(UGS_DIR), express.static(UGS_DIR));
 
 // --- API routes ---
 app.use('/api/auth', authResolveRouter);
@@ -69,6 +75,8 @@ app.use('/api/chat', chatRouter);
 app.use('/api/providers', providersRouter);
 app.use('/api/giphy', giphyRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/moderation', moderationRouter);
+app.use('/api/roles', rolesRouter);
 
 // --- Serve built frontend in production ---
 if (process.env.NODE_ENV === 'production') {

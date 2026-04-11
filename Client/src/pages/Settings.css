@@ -413,3 +413,22 @@
     flex-direction: column;
   }
 }
+
+.settings-report-textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 0.625rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.15);
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  font-family: inherit;
+  margin-bottom: 0.5rem;
+}
+
+.settings-report-msg {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0 0 0.5rem;
+}

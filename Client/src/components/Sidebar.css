@@ -267,6 +267,10 @@
 }
 
 /* Admin link accent */
+.sidebar-link-mod { color: #fbbf24; }
+.sidebar-link-mod.active { color: #f59e0b; background: rgba(245, 158, 11, 0.12); }
+.sidebar-link-mod:hover:not(.active) { color: #fcd34d; }
+
 .sidebar-link-admin { color: #f87171; }
 .sidebar-link-admin.active { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
 .sidebar-link-admin:hover:not(.active) { color: #fca5a5; }

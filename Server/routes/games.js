@@ -254,17 +254,47 @@ function fileId(filename) {
   return filename.replace(/\.html$/i, '');
 }
 
+/** UGS HTML served at /games/<file> on API or Hosting — extract filename from any URL shape. */
+function extractBundledHtmlFilenameFromHttpUrl(urlString) {
+  try {
+    const u = new URL(urlString);
+    const m = u.pathname.match(/\/games\/([^/]+)$/i);
+    if (m && /\.html?$/i.test(m[1])) return decodeURIComponent(m[1]);
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 function fileFromFirestoreUrl(url) {
   if (!url || typeof url !== 'string') return null;
   const t = url.trim();
   if (!t) return null;
-  if (/^https?:\/\//i.test(t)) return null;
+  if (/^https?:\/\//i.test(t)) {
+    return extractBundledHtmlFilenameFromHttpUrl(t);
+  }
   const m =
     t.match(/\/games\/([^/?#]+)$/i) ||
     t.match(/^\/?games\/([^/?#]+)$/i) ||
     t.match(/^([^/]+\.html)$/i);
   if (m) return decodeURIComponent(m[1]);
   return null;
+}
+
+/** API responses: never expose playUrl for our own /games/*.html (avoids LFS stubs on App Hosting). */
+function normalizeGameForClient(game) {
+  if (!game.playUrl || typeof game.playUrl !== 'string') return game;
+  const extracted = extractBundledHtmlFilenameFromHttpUrl(game.playUrl.trim());
+  if (!extracted) return game;
+  return {
+    ...game,
+    file: game.file || extracted,
+    playUrl: null,
+  };
+}
+
+function normalizeGamesForClient(list) {
+  return list.map(normalizeGameForClient);
 }
 
 function mapFirestoreCategory(cat) {
@@ -288,9 +318,9 @@ async function loadFirestoreGamesList() {
       const title = (d.title || '').trim();
       if (!title) continue;
       const url = (d.url || '').trim();
-      const playUrl = /^https?:\/\//i.test(url) ? url : null;
-      const file = playUrl ? null : fileFromFirestoreUrl(url);
-      if (!playUrl && !file) continue;
+      const file = fileFromFirestoreUrl(url);
+      const playUrl = /^https?:\/\//i.test(url) && !file ? url : null;
+      if (!file && !playUrl) continue;
       out.push({
         id: doc.id,
         name: title,
@@ -356,7 +386,7 @@ const router = express.Router();
 
 router.get('/', async (req, res, next) => {
   try {
-    const list = await getMergedGames();
+    const list = normalizeGamesForClient(await getMergedGames());
     res.json(list);
   } catch (err) {
     next(err);
@@ -365,7 +395,7 @@ router.get('/', async (req, res, next) => {
 
 router.get('/search', async (req, res, next) => {
   try {
-    const cachedGames = await getMergedGames();
+    const cachedGames = normalizeGamesForClient(await getMergedGames());
     const q = String(req.query.q ?? '')
       .trim()
       .toLowerCase();
@@ -375,7 +405,7 @@ router.get('/search', async (req, res, next) => {
     const filtered = cachedGames.filter(
       (g) =>
         g.name.toLowerCase().includes(q) ||
-        g.file.toLowerCase().includes(q) ||
+        (g.file || '').toLowerCase().includes(q) ||
         g.id.toLowerCase().includes(q),
     );
     res.json(filtered);

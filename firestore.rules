@@ -11,29 +11,125 @@ service cloud.firestore {
       return isAuth() && request.auth.uid == uid;
     }
 
-    function getUserRole() {
+    function getUserRoleKey() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
+    function roleDefPath() {
+      return /databases/$(database)/documents/roleDefinitions/$(getUserRoleKey());
+    }
+
+    function actorPermissions() {
+      return exists(roleDefPath())
+        ? get(roleDefPath()).data.permissions
+        : {};
+    }
+
+    function hasPerm(perm) {
+      return isAuth() && actorPermissions()[perm] == true;
+    }
+
+    function hasLegacyRoleMgmt() {
+      return hasPerm('manage_roles');
+    }
+
+    function hasAssignHigh() {
+      return hasPerm('assign_high_roles') || hasLegacyRoleMgmt();
+    }
+
+    function hasAssignLow() {
+      return hasPerm('assign_low_roles') || hasLegacyRoleMgmt();
+    }
+
+    /**
+     * Tier used for role-change / ban rules. If the definition doc is missing, use safe
+     * fallbacks: unknown keys default to high so assign_low cannot grant mystery roles.
+     */
+    function roleDefTierOf(roleKey) {
+      let path = /databases/$(database)/documents/roleDefinitions/$(roleKey);
+      return exists(path)
+        ? (get(path).data.privilegeTier != null
+            ? get(path).data.privilegeTier
+            : (roleKey == 'owner' ? 'owner' : roleKey == 'admin' ? 'high' : 'low'))
+        : (roleKey == 'owner' ? 'owner'
+          : roleKey == 'admin' ? 'high'
+          : roleKey == 'user' || roleKey == 'mod' ? 'low'
+          : 'high');
+    }
+
+    function tierRankRule(t) {
+      return t == 'owner' ? 3 : t == 'high' ? 2 : 1;
+    }
+
+    function targetUserRoleKey(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+
     function isAdmin() {
-      return isAuth() && getUserRole() == 'admin';
+      return hasPerm('access_admin_panel');
     }
 
     function isMod() {
-      return isAuth() && (getUserRole() == 'mod' || getUserRole() == 'admin');
+      return hasPerm('moderate_chat') || hasPerm('access_moderator_panel');
     }
 
-    // Users
-    match /users/{uid} {
+    // Role definitions: client read-only — all writes go through the API (Admin SDK) so
+    // permission grants cannot be forged from the client.
+    match /roleDefinitions/{key} {
       allow read: if isAuth();
-      allow create: if isOwner(uid);
-      allow update: if isOwner(uid)
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'banned']);
-      allow update: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /moderationLogs/{logId} {
+      allow read: if hasPerm('access_moderator_panel');
+      allow write: if false;
+    }
+
+    match /reports/{reportId} {
+      allow create: if isAuth()
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.status == 'open';
+      allow read: if hasPerm('access_moderator_panel');
+      allow update: if hasPerm('manage_users');
       allow delete: if false;
     }
 
-    // Friends
+    match /users/{uid} {
+      allow read: if isAuth();
+      allow create: if isOwner(uid)
+        && request.resource.data.role == 'user';
+      allow update: if isOwner(uid)
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['role', 'banned', 'warnings', 'mutedUntil', 'chatRestricted', 'moderationNote']);
+
+      // Role changes: Owner touches vs high vs low tier (legacy manage_roles counts as both assigns)
+      allow update: if isAuth() && request.auth.uid != uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role'])
+        && (
+          (roleDefTierOf(resource.data.role) == 'owner' || roleDefTierOf(request.resource.data.role) == 'owner')
+            ? hasPerm('protect_owner')
+          : (tierRankRule(roleDefTierOf(resource.data.role)) >= 2
+            || tierRankRule(roleDefTierOf(request.resource.data.role)) >= 2)
+            ? hasAssignHigh()
+          : hasAssignLow()
+        );
+
+      allow update: if isAuth() && request.auth.uid != uid && hasPerm('ban_users')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['banned'])
+        && (
+          roleDefTierOf(targetUserRoleKey(uid)) != 'owner'
+          || hasPerm('protect_owner')
+        );
+      allow update: if isAuth() && request.auth.uid != uid && hasPerm('manage_users')
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['warnings', 'mutedUntil', 'chatRestricted', 'moderationNote'])
+        && (
+          roleDefTierOf(targetUserRoleKey(uid)) != 'owner'
+          || hasPerm('protect_owner')
+        );
+      allow delete: if false;
+    }
+
     match /friends/{docId} {
       allow read: if isAuth() && request.auth.uid in resource.data.users;
       allow create: if isAuth() && request.auth.uid in request.resource.data.users;
@@ -41,7 +137,6 @@ service cloud.firestore {
       allow delete: if isAuth() && request.auth.uid in resource.data.users;
     }
 
-    // Direct Messages
     match /directMessages/{channelId} {
       allow read: if isAuth() && request.auth.uid in resource.data.participants;
       allow create: if isAuth() && request.auth.uid in request.resource.data.participants;
@@ -49,11 +144,10 @@ service cloud.firestore {
       match /messages/{msgId} {
         allow read: if isAuth();
         allow create: if isAuth();
-        allow delete: if isMod();
+        allow delete: if hasPerm('moderate_chat');
       }
     }
 
-    // Servers
     match /servers/{serverId} {
       allow read: if isAuth();
       allow create: if isAuth();
@@ -64,15 +158,13 @@ service cloud.firestore {
       match /channels/{channelId}/messages/{msgId} {
         allow read: if isAuth();
         allow create: if isAuth();
-        allow delete: if isMod();
+        allow delete: if hasPerm('moderate_chat');
       }
     }
 
-    // Games metadata
     match /games/{gameId} {
       allow read: if true;
-      allow create: if isMod();
-      allow update: if isMod();
+      allow create, update: if hasPerm('manage_games');
       allow delete: if isAdmin();
     }
   }

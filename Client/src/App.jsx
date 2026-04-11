@@ -11,6 +11,7 @@ import GamePlayer from './pages/GamePlayer';
 import Proxy from './pages/Proxy';
 import Login from './pages/Login';
 import AdminPanel from './pages/AdminPanel';
+import ModeratorPanel from './pages/ModeratorPanel';
 import { useAuth } from './utils/AuthContext';
 import useClickEffect from './utils/useClickEffect';
 
@@ -48,6 +49,7 @@ function AppShell() {
           <Route path="/games" element={<Games />} />
           <Route path="/proxy" element={<Proxy />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/moderator" element={<ModeratorPanel />} />
           <Route path="/admin" element={<AdminPanel />} />
         </Route>
         <Route path="/play/:gameId" element={<GamePlayer />} />

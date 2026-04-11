@@ -15,6 +15,8 @@ export default function ChatWindow({
   onSend,
   onGif,
   connected,
+  inputDisabled = false,
+  sanctionMessage = null,
   onlineCount,
 }) {
   const scrollRef = useRef(null);
@@ -36,6 +38,11 @@ export default function ChatWindow({
 
   return (
     <div className="dc-chat-window">
+      {sanctionMessage && (
+        <div className="dc-sanction-banner" role="status">
+          {sanctionMessage}
+        </div>
+      )}
       <div className="dc-topbar">
         <div className="dc-topbar-left">
           <Icon size={18} className="dc-topbar-hash" />
@@ -75,7 +82,7 @@ export default function ChatWindow({
       <ChatInput
         onSend={onSend}
         onGif={onGif}
-        disabled={!connected}
+        disabled={!connected || inputDisabled}
         channelName={channel}
       />
     </div>

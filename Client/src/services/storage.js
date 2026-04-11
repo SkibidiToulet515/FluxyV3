@@ -39,3 +39,26 @@ export async function uploadMedia(folder, file) {
   await uploadBytes(storageRef, file, { contentType: file.type });
   return getDownloadURL(storageRef);
 }
+
+/** Upload main game HTML for a Firestore game id; returns public download URL and Storage path for cleanup. */
+export async function uploadGameFile(gameId, file) {
+  let base = (file.name || 'game.html').replace(/[^a-zA-Z0-9._-]/g, '_');
+  if (!base) base = 'game.html';
+  const safeName = /\.html?$/i.test(base) ? base : `${base}.html`;
+  const path = `ugsgames/${gameId}/${safeName}`;
+  const storageRef = ref(storage, path);
+  const contentType = file.type && file.type !== '' ? file.type : 'text/html';
+  await uploadBytes(storageRef, file, { contentType });
+  const url = await getDownloadURL(storageRef);
+  return { url, path };
+}
+
+export async function deleteGameFileByPath(storagePath) {
+  if (!storagePath || typeof storagePath !== 'string') return;
+  const storageRef = ref(storage, storagePath);
+  try {
+    await deleteObject(storageRef);
+  } catch {
+    /* ignore missing or permission edge cases */
+  }
+}

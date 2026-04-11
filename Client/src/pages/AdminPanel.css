@@ -265,6 +265,68 @@
 }
 
 .admin-role-btns { display: flex; gap: 4px; }
+.admin-role-btns-wrap { flex-wrap: wrap; max-width: 420px; }
+.admin-perm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+.admin-custom-role-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem;
+}
+.admin-error-banner {
+  font-size: 0.8rem;
+  color: #f87171;
+  margin: 0 0 0.75rem;
+}
+
+.admin-badge-owner {
+  margin-left: 6px;
+  font-size: 0.55rem;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.admin-tier-pill {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.admin-role-confirm-block {
+  padding: 0.75rem;
+  margin-top: 4px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+
+.admin-warn-list {
+  margin: 0.5rem 0 0 1rem;
+  padding: 0;
+  font-size: 0.72rem;
+  color: #fde68a;
+  line-height: 1.45;
+}
+
+.admin-confirm-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.admin-danger-ack {
+  color: #fca5a5 !important;
+}
 
 /* Game cells */
 .admin-game-cell {
@@ -322,6 +384,14 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
+}
+.admin-form-grid label .admin-form-hint {
+  font-size: 0.68rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 .admin-form-grid input,
 .admin-form-grid select,

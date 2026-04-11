@@ -4,7 +4,8 @@ import {
   getDocs, onSnapshot, serverTimestamp, arrayUnion, arrayRemove,
   addDoc, Timestamp,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, auth } from './firebase';
+import { uploadGameFile, deleteGameFileByPath } from './storage';
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
@@ -43,10 +44,6 @@ export function subscribeUser(uid, callback) {
   return onSnapshot(doc(db, 'users', uid), (snap) => {
     callback(snap.exists() ? { uid, ...snap.data() } : null);
   });
-}
-
-export async function setUserRole(uid, role) {
-  await updateDoc(doc(db, 'users', uid), { role });
 }
 
 // ─── Friends ──────────────────────────────────────────────────────────────────
@@ -197,12 +194,17 @@ export async function getAllUsers() {
   return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
 }
 
-export async function banUser(uid) {
-  await updateDoc(doc(db, 'users', uid), { banned: true });
-}
-
-export async function unbanUser(uid) {
-  await updateDoc(doc(db, 'users', uid), { banned: false });
+export async function submitUserReport({ reason, targetUid = null, targetUsername = null }) {
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new Error('Sign in required');
+  await addDoc(collection(db, 'reports'), {
+    reporterUid: uid,
+    reason: (reason || '').toString().slice(0, 1000),
+    targetUid: targetUid || null,
+    targetUsername: targetUsername || null,
+    status: 'open',
+    createdAt: serverTimestamp(),
+  });
 }
 
 // ─── Admin: Games ─────────────────────────────────────────────────────────────
@@ -212,26 +214,50 @@ export async function getAllGameDocs() {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-export async function createGameDoc(data) {
-  const ref = await addDoc(collection(db, 'games'), {
+export async function createGameDoc(data, gameFile = null) {
+  const gameRef = doc(collection(db, 'games'));
+  const gameId = gameRef.id;
+  let url = (data.url || '').trim();
+  let storagePath = null;
+  if (gameFile) {
+    const uploaded = await uploadGameFile(gameId, gameFile);
+    url = uploaded.url;
+    storagePath = uploaded.path;
+  }
+  await setDoc(gameRef, {
     title: data.title,
     category: data.category || 'Uncategorized',
     description: data.description || '',
     thumbnail: data.thumbnail || null,
-    url: data.url || '',
+    url,
+    ...(storagePath ? { storagePath } : {}),
     plays: 0,
     featured: data.featured || false,
-    visible: true,
+    visible: data.visible !== false,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  return ref.id;
+  return gameId;
 }
 
-export async function updateGameDoc(gameId, fields) {
-  await updateDoc(doc(db, 'games', gameId), { ...fields, updatedAt: serverTimestamp() });
+export async function updateGameDoc(gameId, fields, gameFile = null) {
+  const updates = { ...fields, updatedAt: serverTimestamp() };
+  if (gameFile) {
+    const meta = await getGameMeta(gameId);
+    if (meta?.storagePath) {
+      await deleteGameFileByPath(meta.storagePath);
+    }
+    const uploaded = await uploadGameFile(gameId, gameFile);
+    updates.url = uploaded.url;
+    updates.storagePath = uploaded.path;
+  }
+  await updateDoc(doc(db, 'games', gameId), updates);
 }
 
 export async function deleteGameDoc(gameId) {
+  const meta = await getGameMeta(gameId);
+  if (meta?.storagePath) {
+    await deleteGameFileByPath(meta.storagePath);
+  }
   await deleteDoc(doc(db, 'games', gameId));
 }

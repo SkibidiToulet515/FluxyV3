@@ -3,9 +3,34 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    match /avatars/{uid}.{ext} {
+    // Public read so games load in iframe; writes restricted to mod/admin (see Firestore users.role).
+    function ugsGamesActorRole() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role;
+    }
+    function ugsGamesCanManage() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && firestore.exists(/databases/(default)/documents/roleDefinitions/$(ugsGamesActorRole()))
+        && firestore.get(/databases/(default)/documents/roleDefinitions/$(ugsGamesActorRole())).data.permissions.manage_games == true;
+    }
+
+    match /ugsgames/{gameId}/{fileName} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == uid
+      allow delete: if ugsGamesCanManage();
+      allow create, update: if ugsGamesCanManage()
+        && request.resource.size < 100 * 1024 * 1024
+        && (
+          request.resource.contentType.matches('text/.*')
+          || request.resource.contentType == 'application/octet-stream'
+          || request.resource.contentType == 'application/xhtml+xml'
+        );
+    }
+
+    // Single path segment "uid.ext" (variable.{ext} is invalid in Storage rules syntax)
+    match /avatars/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && fileName.matches('^' + request.auth.uid + '\\.[A-Za-z0-9]+$')
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
@@ -17,7 +42,7 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
     }
 
-    match /thumbnails/{gameId}.{ext} {
+    match /thumbnails/{fileName} {
       allow read: if true;
       allow write: if request.auth != null
         && request.resource.size < 5 * 1024 * 1024

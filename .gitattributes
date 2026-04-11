@@ -1,2 +1,7 @@
-# Large UGS game bundles — Git LFS (https://git-lfs.com). Run: git lfs install
+# UGS HTML games — optional Git LFS. Recommended: store small HTML as normal git files (no LFS)
+# so CI/App Hosting never see pointer stubs. If you keep LFS, Firebase Hosting build uses
+# lfs:true and prebuild fails if pointers remain on disk.
+#
+# To drop LFS: remove the line below, run `git lfs pull`, then:
+#   git rm --cached -r "Client/UGS Files" && git add "Client/UGS Files" && git commit
 Client/UGS[[:space:]]Files/** filter=lfs diff=lfs merge=lfs -text

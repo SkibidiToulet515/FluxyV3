@@ -4,16 +4,35 @@
 # set "Root directory" to the repository root:  /  or  .  (NOT "Server").
 # That way the container includes Client/UGS Files for /games and /api/games.
 #
-# After changing root directory, push to main (or trigger a rollout).
+# Client/UGS Files may be tracked with Git LFS. We install the git-lfs CLI and run
+# `git lfs pull` when possible. If GitHub LFS quota is exceeded, pull fails — the build
+# still continues so the API deploys; /games may serve placeholders until you fix LFS
+# billing or migrate UGS HTML out of LFS (see .gitattributes comments).
 
 runConfig:
   cpu: 1
   memoryMiB: 1024
 
 scripts:
-  # Cloud Build often has no `git-lfs`; a bare `git lfs pull` fails the whole build. If `git-lfs`
-  # exists, hydrate LFS files; otherwise continue (UGS may be pointer stubs — use https game URLs in Firestore).
-  buildCommand: 'sh -c "if command -v git-lfs >/dev/null 2>&1; then git lfs install && (git lfs pull || true); fi; npm ci --prefix Server"'
+  buildCommand: |
+    set -e
+    ARCH=amd64
+    case "$(uname -m)" in aarch64|arm64) ARCH=arm64 ;; esac
+    GLFS_VER=3.6.1
+    curl -fsSL "https://github.com/git-lfs/git-lfs/releases/download/v${GLFS_VER}/git-lfs-linux-${ARCH}-v${GLFS_VER}.tar.gz" -o /tmp/git-lfs.tgz
+    tar -xzf /tmp/git-lfs.tgz -C /tmp
+    chmod +x /tmp/git-lfs
+    export PATH="/tmp:$PATH"
+    git lfs install
+    set +e
+    git lfs pull
+    LFS_PULL=$?
+    set -e
+    if [ "$LFS_PULL" -ne 0 ]; then
+      echo "WARNING: git lfs pull failed (exit $LFS_PULL). Common cause: GitHub LFS budget exceeded."
+      echo "UGS files in the image may still be pointer stubs — increase LFS quota or store games without LFS."
+    fi
+    npm ci --prefix Server
   runCommand: node Server/index.js
 
 # Keep the full monorepo tree (especially Client/UGS Files) in the runtime image.

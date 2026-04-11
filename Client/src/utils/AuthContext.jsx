@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -6,11 +6,14 @@ import {
   onAuthStateChanged,
   updateProfile,
 } from 'firebase/auth';
-import { auth } from '../services/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '../services/firebase';
 import { createUserDoc, getUserDoc, updateUserDoc, subscribeUser } from '../services/firestore';
+import { expandLegacyManageRoles } from '../lib/rbacClient';
 
 const AuthContext = createContext(null);
 
+/** Legacy tier compare when roleDefinitions doc is missing (treat as pre-migration). */
 const ROLES = { user: 0, mod: 1, admin: 2 };
 const SYNTHETIC_DOMAIN = '@fluxy.local';
 
@@ -45,6 +48,7 @@ async function resolveUsernameToEmail(username) {
 export function AuthProvider({ children }) {
   const [firebaseUser, setFirebaseUser] = useState(undefined);
   const [profile, setProfile] = useState(null);
+  const [roleDefinition, setRoleDefinition] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -66,6 +70,22 @@ export function AuthProvider({ children }) {
     });
     return unsub;
   }, [firebaseUser]);
+
+  useEffect(() => {
+    if (!firebaseUser || !profile?.role) {
+      setRoleDefinition(null);
+      return;
+    }
+    const roleKey = profile.role;
+    const unsub = onSnapshot(
+      doc(db, 'roleDefinitions', roleKey),
+      (snap) => {
+        setRoleDefinition(snap.exists() ? { key: roleKey, ...snap.data() } : null);
+      },
+      () => setRoleDefinition(null),
+    );
+    return unsub;
+  }, [firebaseUser, profile?.role]);
 
   const register = useCallback(async (username, password, email) => {
     const effectiveEmail = email?.trim() || toSyntheticEmail(username);
@@ -125,16 +145,39 @@ export function AuthProvider({ children }) {
     await updateUserDoc(firebaseUser.uid, { bio });
   }, [firebaseUser]);
 
+  const eff = useMemo(
+    () => expandLegacyManageRoles(roleDefinition?.permissions || {}),
+    [roleDefinition],
+  );
+
+  const hasPermission = useCallback((perm) => Boolean(eff[perm]), [eff]);
+
   function hasRole(minRole) {
     if (!profile) return false;
+    if (roleDefinition?.permissions) {
+      if (minRole === 'admin') return hasPermission('access_admin_panel');
+      if (minRole === 'mod') {
+        return hasPermission('access_moderator_panel') || hasPermission('access_admin_panel');
+      }
+    }
     return (ROLES[profile.role] ?? 0) >= (ROLES[minRole] ?? 0);
   }
+  const isAdmin = Boolean(
+    eff.access_admin_panel
+    || (!roleDefinition && profile?.role === 'admin'),
+  );
+  const isMod = Boolean(
+    eff.access_moderator_panel
+    || eff.access_admin_panel
+    || (!roleDefinition && (profile?.role === 'mod' || profile?.role === 'admin')),
+  );
 
   const displayEmail = profile?.email && !isSyntheticEmail(profile.email) ? profile.email : null;
 
   const value = {
     user: firebaseUser,
     profile,
+    roleDefinition,
     loading,
     register,
     login,
@@ -143,8 +186,9 @@ export function AuthProvider({ children }) {
     updateAvatar,
     updateBio,
     hasRole,
-    isAdmin: profile?.role === 'admin',
-    isMod: profile?.role === 'mod' || profile?.role === 'admin',
+    hasPermission,
+    isAdmin,
+    isMod,
 
     account: profile ? {
       username: profile.username,
@@ -152,9 +196,12 @@ export function AuthProvider({ children }) {
       color: pickColor(profile.username),
       status: profile.status || 'online',
       role: profile.role || 'user',
+      roleDisplayName: roleDefinition?.displayName || profile.role || 'user',
       avatar: profile.avatar || null,
       bio: profile.bio || '',
       uid: profile.uid,
+      mutedUntil: profile.mutedUntil || null,
+      chatRestricted: profile.chatRestricted === true,
     } : null,
   };
 

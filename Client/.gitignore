@@ -1,0 +1,3 @@
+# Copied from UGS Files on each `npm run build` (see scripts/syncUgsToPublic.mjs)
+public/games/*
+!public/games/.gitkeep
