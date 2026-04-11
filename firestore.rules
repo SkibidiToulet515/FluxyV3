@@ -133,17 +133,30 @@ service cloud.firestore {
     }
 
     // ─── Friends ──────────────────────────────────────────────────────
-    // FIX: split read → get + list.
-    // get (single doc by exact ID) is safe because the ID is uid1_uid2 — you
-    // need to know both UIDs. list still requires membership.
+    // get: safe because doc ID is uid1_uid2 — caller must know both UIDs.
+    // list: scoped to own friendships.
+    // create: only the sender can create; status must start as pending.
+    // update: ONLY the "to" user can accept a pending request.
+    //         No other field mutations allowed.
+    // delete: either participant (decline / cancel / remove).
     match /friends/{docId} {
       allow get: if isAuth();
       allow list: if isAuth() && request.auth.uid in resource.data.users;
-      allow create: if isAuth() && request.auth.uid in request.resource.data.users
+
+      allow create: if isAuth()
+        && request.auth.uid in request.resource.data.users
         && request.resource.data.users.size() == 2
         && request.resource.data.status == 'pending'
-        && request.resource.data.from == request.auth.uid;
-      allow update: if isAuth() && request.auth.uid in resource.data.users;
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.to != request.auth.uid;
+
+      allow update: if isAuth()
+        && request.auth.uid == resource.data.to
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'accepted'
+        && request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['status', 'acceptedAt']);
+
       allow delete: if isAuth() && request.auth.uid in resource.data.users;
     }
 
@@ -152,23 +165,28 @@ service cloud.firestore {
       allow read: if isAuth() && request.auth.uid in resource.data.participants;
       allow create: if isAuth() && request.auth.uid in request.resource.data.participants
         && request.resource.data.participants.size() == 2;
-      allow update: if isAuth() && request.auth.uid in resource.data.participants;
+      allow update: if isAuth() && request.auth.uid in resource.data.participants
+        && request.resource.data.diff(resource.data).affectedKeys()
+           .hasOnly(['lastMessage', 'lastMessageAt', 'lastSenderUid']);
 
       match /messages/{msgId} {
-        allow read: if isAuth();
+        allow read: if isAuth()
+          && request.auth.uid in
+             get(/databases/$(database)/documents/directMessages/$(channelId)).data.participants;
+
         allow create: if isAuth()
           && request.resource.data.senderUid == request.auth.uid;
-        // Edit own message (text + editedAt only)
+
         allow update: if isAuth()
           && resource.data.senderUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['text', 'editedAt'])
           && request.resource.data.senderUid == resource.data.senderUid;
-        // Toggle reactions (any authenticated user)
+
         allow update: if isAuth()
           && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['reactions']);
-        // Delete own or moderate
+
         allow delete: if isAuth()
           && (resource.data.senderUid == request.auth.uid
             || hasPerm('moderate_chat'));
@@ -181,21 +199,43 @@ service cloud.firestore {
       allow create: if isAuth()
         && request.auth.uid == request.resource.data.owner
         && request.auth.uid in request.resource.data.members;
-      allow update: if isAuth() && request.auth.uid in resource.data.members;
+
+      // Owner can change anything.
+      allow update: if isAuth() && request.auth.uid == resource.data.owner;
+
+      // Non-owner members: message metadata or self-leave only.
+      allow update: if isAuth()
+        && request.auth.uid in resource.data.members
+        && request.auth.uid != resource.data.owner
+        && (
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['lastMessage', 'lastMessageAt', 'lastSenderUid'])
+          || (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+            && !(request.auth.uid in request.resource.data.members)
+          )
+        );
+
       allow delete: if isAuth() && request.auth.uid == resource.data.owner;
 
       match /messages/{msgId} {
-        allow read: if isAuth();
+        allow read: if isAuth()
+          && request.auth.uid in
+             get(/databases/$(database)/documents/groupChats/$(groupId)).data.members;
+
         allow create: if isAuth()
           && request.resource.data.senderUid == request.auth.uid;
+
         allow update: if isAuth()
           && resource.data.senderUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['text', 'editedAt'])
           && request.resource.data.senderUid == resource.data.senderUid;
+
         allow update: if isAuth()
           && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['reactions']);
+
         allow delete: if isAuth()
           && (resource.data.senderUid == request.auth.uid
             || hasPerm('moderate_chat'));
@@ -205,34 +245,52 @@ service cloud.firestore {
     // ─── Servers ──────────────────────────────────────────────────────
     match /servers/{serverId} {
       allow read: if isAuth();
+
       allow create: if isAuth()
+        && request.auth.uid == request.resource.data.owner
         && request.auth.uid in request.resource.data.members;
-      // Members/owner/mods can update, OR any user can add self to members (join)
+
+      // Owner can change anything.
+      allow update: if isAuth() && request.auth.uid == resource.data.owner;
+
+      // Existing members (non-owner): anything except owner/createdAt.
       allow update: if isAuth()
-        && (
-          request.auth.uid == resource.data.owner
-          || request.auth.uid in resource.data.members
-          || isMod()
-          || (
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
-            && request.auth.uid in request.resource.data.members
-          )
-        );
+        && request.auth.uid in resource.data.members
+        && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['owner', 'createdAt']);
+
+      // Platform mods: anything except owner/createdAt.
+      allow update: if isMod()
+        && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['owner', 'createdAt']);
+
+      // Self-join: non-member can add ONLY themselves; existing members
+      // must remain (superset check prevents kicking others).
+      allow update: if isAuth()
+        && !(request.auth.uid in resource.data.members)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+        && request.auth.uid in request.resource.data.members
+        && request.resource.data.members.hasAll(resource.data.members);
+
       allow delete: if isAdmin()
         || (isAuth() && request.auth.uid == resource.data.owner);
 
       match /channels/{channelId}/messages/{msgId} {
         allow read: if isAuth();
+
         allow create: if isAuth()
           && request.resource.data.senderUid == request.auth.uid;
+
         allow update: if isAuth()
           && resource.data.senderUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['text', 'editedAt'])
           && request.resource.data.senderUid == resource.data.senderUid;
+
         allow update: if isAuth()
           && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['reactions']);
+
         allow delete: if isAuth()
           && (resource.data.senderUid == request.auth.uid
             || hasPerm('moderate_chat'));
@@ -242,10 +300,18 @@ service cloud.firestore {
     // ─── Server Invites ───────────────────────────────────────────────
     match /serverInvites/{inviteCode} {
       allow read: if isAuth();
+
       allow create: if isAuth()
         && request.resource.data.createdBy == request.auth.uid;
+
+      // Only the uses counter can change, and only by exactly +1.
+      // Server-side maxUses enforcement prevents exceeding the cap.
       allow update: if isAuth()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uses']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uses'])
+        && request.resource.data.uses == resource.data.uses + 1
+        && (resource.data.maxUses == 0
+          || request.resource.data.uses <= resource.data.maxUses);
+
       allow delete: if isAuth()
         && (resource.data.createdBy == request.auth.uid || isAdmin());
     }

@@ -33,19 +33,10 @@ const VIEW_GROUP = 'group';
 const VIEW_SERVER = 'server';
 
 function mergeMessageLists(older, live) {
-  const seen = new Set();
-  const out = [];
-  for (const m of older) {
-    if (m?.id && !seen.has(m.id)) { seen.add(m.id); out.push(m); }
-  }
-  for (const m of live) {
-    if (m?.id && !seen.has(m.id)) { seen.add(m.id); out.push(m); }
-    else if (m?.id && seen.has(m.id)) {
-      const idx = out.findIndex((o) => o.id === m.id);
-      if (idx !== -1) out[idx] = m;
-    }
-  }
-  return out;
+  const map = new Map();
+  for (const m of older) if (m?.id) map.set(m.id, m);
+  for (const m of live) if (m?.id) map.set(m.id, m);
+  return Array.from(map.values());
 }
 
 export default function Chat() {
@@ -74,8 +65,10 @@ export default function Chat() {
   const olderRef = useRef([]);
   const oldestCursorRef = useRef(null);
   const loadOlderLockRef = useRef(false);
+  const userCacheRef = useRef({});
 
   useEffect(() => { olderRef.current = olderMessages; }, [olderMessages]);
+  useEffect(() => { userCacheRef.current = userCache; }, [userCache]);
 
   const messages = useMemo(
     () => mergeMessageLists(olderMessages, liveMessages),
@@ -83,11 +76,11 @@ export default function Chat() {
   );
 
   const resolveUser = useCallback(async (targetUid) => {
-    if (userCache[targetUid]) return userCache[targetUid];
+    if (userCacheRef.current[targetUid]) return userCacheRef.current[targetUid];
     const u = await getUserDoc(targetUid);
     if (u) setUserCache((prev) => ({ ...prev, [targetUid]: u }));
     return u;
-  }, [userCache]);
+  }, []);
 
   useEffect(() => {
     if (!uid) return;

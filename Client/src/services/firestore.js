@@ -2,7 +2,7 @@ import {
   doc, getDoc, setDoc, updateDoc, deleteDoc,
   collection, query, where, orderBy, limit, startAfter,
   getDocs, onSnapshot, serverTimestamp, arrayUnion, arrayRemove,
-  addDoc,
+  addDoc, increment,
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { uploadGameFile, deleteGameFileByPath } from './storage';
@@ -111,6 +111,10 @@ export async function removeFriend(docId) {
   await deleteDoc(doc(db, 'friends', docId));
 }
 
+function snapshotErrorHandler(label) {
+  return (err) => console.error(`[Fluxy] ${label} listener error:`, err.code || err.message);
+}
+
 export function subscribeFriends(uid, callback) {
   const q = query(
     collection(db, 'friends'),
@@ -119,7 +123,7 @@ export function subscribeFriends(uid, callback) {
   );
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-  });
+  }, snapshotErrorHandler('subscribeFriends'));
 }
 
 export function subscribeFriendRequests(uid, callback) {
@@ -130,7 +134,7 @@ export function subscribeFriendRequests(uid, callback) {
   );
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-  });
+  }, snapshotErrorHandler('subscribeFriendRequests'));
 }
 
 // ─── Direct Messages ──────────────────────────────────────────────────────────
@@ -162,7 +166,7 @@ export function subscribeDmChannels(uid, callback) {
   );
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-  });
+  }, snapshotErrorHandler('subscribeDmChannels'));
 }
 
 /**
@@ -184,7 +188,7 @@ export function subscribeDmMessages(channelId, callback, messageLimit = CHAT_PAG
       oldestLiveDoc,
       isFullPage: docs.length === messageLimit,
     });
-  });
+  }, snapshotErrorHandler('subscribeDmMessages'));
 }
 
 /** Load older messages before `cursorDoc` (QueryDocumentSnapshot of current oldest loaded). */
@@ -246,7 +250,7 @@ export function subscribeGroupChats(uid, callback) {
   );
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-  });
+  }, snapshotErrorHandler('subscribeGroupChats'));
 }
 
 export async function updateGroupChat(groupId, fields) {
@@ -283,7 +287,7 @@ export function subscribeGroupMessages(groupId, callback, messageLimit = CHAT_PA
       oldestLiveDoc,
       isFullPage: docs.length === messageLimit,
     });
-  });
+  }, snapshotErrorHandler('subscribeGroupMessages'));
 }
 
 export async function loadOlderGroupMessages(groupId, cursorDoc, batchSize = CHAT_PAGE_SIZE) {
@@ -342,7 +346,7 @@ export function subscribeServers(uid, callback) {
   );
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-  });
+  }, snapshotErrorHandler('subscribeServers'));
 }
 
 export async function updateServer(serverId, fields) {
@@ -381,7 +385,7 @@ export function subscribeServerMessages(serverId, channelId, callback, messageLi
       oldestLiveDoc,
       isFullPage: docs.length === messageLimit,
     });
-  });
+  }, snapshotErrorHandler('subscribeServerMessages'));
 }
 
 export async function loadOlderServerMessages(serverId, channelId, cursorDoc, batchSize = CHAT_PAGE_SIZE) {
@@ -482,7 +486,7 @@ export async function useServerInvite(inviteCode, uid) {
   if (serverSnap.data().members?.includes(uid)) throw new Error('Already a member');
   await updateDoc(serverRef, { members: arrayUnion(uid) });
   await updateDoc(doc(db, 'serverInvites', inviteCode), {
-    uses: (invite.uses || 0) + 1,
+    uses: increment(1),
   });
   return invite.serverId;
 }
