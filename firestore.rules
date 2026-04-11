@@ -98,9 +98,12 @@ service cloud.firestore {
       allow read: if isAuth();
       allow create: if isOwner(uid)
         && request.resource.data.role == 'user';
+      // Self-updates: must keep all critical fields intact (prevents .set() without merge)
       allow update: if isOwner(uid)
         && !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['role', 'banned', 'warnings', 'mutedUntil', 'chatRestricted', 'moderationNote']);
+          .hasAny(['role', 'banned', 'warnings', 'mutedUntil', 'chatRestricted', 'moderationNote'])
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.keys().hasAll(['role', 'username', 'email']);
 
       // Role changes: Owner touches vs high vs low tier (legacy manage_roles counts as both assigns)
       allow update: if isAuth() && request.auth.uid != uid

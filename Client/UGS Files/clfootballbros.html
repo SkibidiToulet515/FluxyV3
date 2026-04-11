@@ -400,7 +400,7 @@
 	      userData = gameData;
 	      db.collection('users').doc(userId).set({
 	        gameData: gameData
-	      }).then(function() {
+	      }, { merge: true }).then(function() {
 	        console.log('Game data saved');
 	      }).catch(function(error) {
 	        console.error('Error saving game data:', error);

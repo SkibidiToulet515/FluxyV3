@@ -5,7 +5,8 @@ import { fetchGames } from '../utils/api';
 import { getGamePlaySrc } from '../utils/gamePlayUrl';
 import './GamePlayer.css';
 
-const INJECT_CSS = 'html,body{width:100%!important;height:100%!important;margin:0!important;padding:0!important;overflow:hidden!important}';
+const GAME_NATIVE_W = 960;
+const GAME_NATIVE_H = 540;
 
 export default function GamePlayer() {
   const { gameId } = useParams();
@@ -16,16 +17,23 @@ export default function GamePlayer() {
   const containerRef = useRef(null);
   const iframeRef = useRef(null);
 
-  const onIframeLoad = useCallback(() => {
-    try {
-      const doc = iframeRef.current?.contentDocument;
-      if (!doc) return;
-      const style = doc.createElement('style');
-      style.textContent = INJECT_CSS;
-      (doc.head || doc.documentElement).appendChild(style);
-    } catch {
-      /* cross-origin — can't inject, game will use its own sizing */
-    }
+  const scaleIframe = useCallback(() => {
+    const container = iframeRef.current?.parentElement;
+    const iframe = iframeRef.current;
+    if (!container || !iframe) return;
+
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    if (!cw || !ch) return;
+
+    const scale = Math.min(cw / GAME_NATIVE_W, ch / GAME_NATIVE_H);
+    iframe.style.width = `${GAME_NATIVE_W}px`;
+    iframe.style.height = `${GAME_NATIVE_H}px`;
+    iframe.style.transform = `scale(${scale})`;
+    iframe.style.transformOrigin = 'top left';
+    iframe.style.position = 'absolute';
+    iframe.style.top = `${(ch - GAME_NATIVE_H * scale) / 2}px`;
+    iframe.style.left = `${(cw - GAME_NATIVE_W * scale) / 2}px`;
   }, []);
 
   useEffect(() => {
@@ -38,10 +46,18 @@ export default function GamePlayer() {
   useEffect(() => {
     function onFsChange() {
       setIsFs(Boolean(document.fullscreenElement));
+      requestAnimationFrame(scaleIframe);
     }
     document.addEventListener('fullscreenchange', onFsChange);
     return () => document.removeEventListener('fullscreenchange', onFsChange);
-  }, []);
+  }, [scaleIframe]);
+
+  useEffect(() => {
+    if (!game) return;
+    scaleIframe();
+    window.addEventListener('resize', scaleIframe);
+    return () => window.removeEventListener('resize', scaleIframe);
+  }, [game, scaleIframe]);
 
   const toggleFullscreen = useCallback(() => {
     if (!containerRef.current) return;
@@ -103,7 +119,7 @@ export default function GamePlayer() {
           sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals"
           allowFullScreen
           scrolling="no"
-          onLoad={onIframeLoad}
+          onLoad={scaleIframe}
         />
       </div>
     </div>
