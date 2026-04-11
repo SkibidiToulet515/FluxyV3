@@ -1,9 +1,50 @@
 import { useState } from 'react';
 import {
-  Hash, Users, MessageSquare, UserPlus, Plus, ChevronDown, ChevronRight,
+  Hash, Users, MessageSquare, UserPlus, Plus, ChevronDown, ChevronRight, Link2, Check, Copy,
 } from 'lucide-react';
 import CreateGroupModal from './CreateGroupModal';
 import UserAvatar from './UserAvatar';
+import { createServerInvite } from '../../services/firestore';
+
+function InviteSection({ serverId, serverName }) {
+  const [code, setCode] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const generate = async () => {
+    setLoading(true);
+    try {
+      const c = await createServerInvite(serverId, serverName);
+      setCode(c);
+    } catch { /* ignore */ }
+    setLoading(false);
+  };
+
+  const copy = () => {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="dc-invite-section">
+      {!code ? (
+        <button className="dc-invite-generate" onClick={generate} disabled={loading}>
+          <Link2 size={14} />
+          {loading ? 'Generating…' : 'Create Invite'}
+        </button>
+      ) : (
+        <div className="dc-invite-result">
+          <code className="dc-invite-code">{code}</code>
+          <button className="dc-invite-copy" onClick={copy} title="Copy">
+            {copied ? <Check size={14} /> : <Copy size={14} />}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ChatSidebar({
   view,
@@ -47,6 +88,9 @@ export default function ChatSidebar({
               </div>
             </button>
           ))}
+
+          <div className="dc-section-label" style={{ marginTop: 16 }}>INVITE</div>
+          <InviteSection serverId={activeServerId} serverName={activeServer.name} />
         </div>
       </div>
     );
@@ -59,7 +103,6 @@ export default function ChatSidebar({
       </div>
 
       <div className="dc-chat-list">
-        {/* Friends button */}
         <button
           className={`dc-chat-item ${view === '__friends__' ? 'active' : ''}`}
           onClick={onOpenFriends}
@@ -67,13 +110,10 @@ export default function ChatSidebar({
           <div className="dc-channel-icon"><Users size={18} /></div>
           <div className="dc-chat-meta">
             <span className="dc-chat-name">Friends</span>
-            {pendingCount > 0 && (
-              <span className="dc-chat-badge">{pendingCount}</span>
-            )}
+            {pendingCount > 0 && <span className="dc-chat-badge">{pendingCount}</span>}
           </div>
         </button>
 
-        {/* DMs */}
         <button
           className="dc-section-label dc-section-toggle"
           onClick={() => setDmExpanded(!dmExpanded)}
@@ -90,24 +130,15 @@ export default function ChatSidebar({
               className={`dc-chat-item ${activeDmId === dm.id ? 'active' : ''}`}
               onClick={() => onOpenDm(dm.id)}
             >
-              <UserAvatar
-                user={partner}
-                size={32}
-                className="dc-chat-item-avatar"
-              />
+              <UserAvatar user={partner} size={32} className="dc-chat-item-avatar" />
               <div className="dc-chat-meta">
-                <span className="dc-chat-name">
-                  {partner?.username || 'User'}
-                </span>
-                <span className="dc-chat-preview">
-                  {dm.lastMessage || 'No messages yet'}
-                </span>
+                <span className="dc-chat-name">{partner?.username || 'User'}</span>
+                <span className="dc-chat-preview">{dm.lastMessage || 'No messages yet'}</span>
               </div>
             </button>
           );
         })}
 
-        {/* Group Chats */}
         <button
           className="dc-section-label dc-section-toggle"
           onClick={() => setGroupExpanded(!groupExpanded)}
@@ -137,9 +168,7 @@ export default function ChatSidebar({
             </div>
             <div className="dc-chat-meta">
               <span className="dc-chat-name">{group.name}</span>
-              <span className="dc-chat-preview">
-                {group.lastMessage || 'No messages yet'}
-              </span>
+              <span className="dc-chat-preview">{group.lastMessage || 'No messages yet'}</span>
             </div>
           </button>
         ))}

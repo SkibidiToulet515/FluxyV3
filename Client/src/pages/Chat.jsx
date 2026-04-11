@@ -14,6 +14,9 @@ import {
   getUserDoc,
   loadOlderDmMessages, loadOlderGroupMessages, loadOlderServerMessages,
   CHAT_PAGE_SIZE,
+  ensureDefaultServer,
+  addReaction, removeReaction,
+  editMessage, deleteMessage, submitMessageReport,
 } from '../services/firestore';
 import './Chat.css';
 
@@ -33,15 +36,13 @@ function mergeMessageLists(older, live) {
   const seen = new Set();
   const out = [];
   for (const m of older) {
-    if (m?.id && !seen.has(m.id)) {
-      seen.add(m.id);
-      out.push(m);
-    }
+    if (m?.id && !seen.has(m.id)) { seen.add(m.id); out.push(m); }
   }
   for (const m of live) {
-    if (m?.id && !seen.has(m.id)) {
-      seen.add(m.id);
-      out.push(m);
+    if (m?.id && !seen.has(m.id)) { seen.add(m.id); out.push(m); }
+    else if (m?.id && seen.has(m.id)) {
+      const idx = out.findIndex((o) => o.id === m.id);
+      if (idx !== -1) out[idx] = m;
     }
   }
   return out;
@@ -74,9 +75,7 @@ export default function Chat() {
   const oldestCursorRef = useRef(null);
   const loadOlderLockRef = useRef(false);
 
-  useEffect(() => {
-    olderRef.current = olderMessages;
-  }, [olderMessages]);
+  useEffect(() => { olderRef.current = olderMessages; }, [olderMessages]);
 
   const messages = useMemo(
     () => mergeMessageLists(olderMessages, liveMessages),
@@ -92,6 +91,7 @@ export default function Chat() {
 
   useEffect(() => {
     if (!uid) return;
+    ensureDefaultServer(uid).catch(() => {});
     const unsubs = [
       subscribeFriends(uid, setFriends),
       subscribeFriendRequests(uid, setFriendRequests),
@@ -115,6 +115,7 @@ export default function Chat() {
     setLiveMessages([]);
     setHasMoreOlder(false);
     oldestCursorRef.current = null;
+    loadOlderLockRef.current = false;
     if (view === VIEW_FRIENDS) return;
 
     let unsub;
@@ -139,10 +140,7 @@ export default function Chat() {
   const handleLoadOlder = useCallback(async () => {
     if (loadOlderLockRef.current || loadingOlder || !hasMoreOlder) return;
     const cursor = oldestCursorRef.current;
-    if (!cursor) {
-      setHasMoreOlder(false);
-      return;
-    }
+    if (!cursor) { setHasMoreOlder(false); return; }
     loadOlderLockRef.current = true;
     setLoadingOlder(true);
     try {
@@ -153,13 +151,8 @@ export default function Chat() {
         res = await loadOlderGroupMessages(activeGroupId, cursor, CHAT_PAGE_SIZE);
       } else if (view === VIEW_SERVER && activeServerId && activeChannelId) {
         res = await loadOlderServerMessages(activeServerId, activeChannelId, cursor, CHAT_PAGE_SIZE);
-      } else {
-        return;
-      }
-      if (!res.fetchedCount) {
-        setHasMoreOlder(false);
-        return;
-      }
+      } else { return; }
+      if (!res.fetchedCount) { setHasMoreOlder(false); return; }
       setOlderMessages((prev) => [...res.messages, ...prev]);
       oldestCursorRef.current = res.oldestDocSnap;
       setHasMoreOlder(res.fetchedCount === CHAT_PAGE_SIZE);
@@ -167,77 +160,74 @@ export default function Chat() {
       loadOlderLockRef.current = false;
       setLoadingOlder(false);
     }
-  }, [
-    loadingOlder,
-    hasMoreOlder,
-    view,
-    activeDmId,
-    activeGroupId,
-    activeServerId,
-    activeChannelId,
-  ]);
+  }, [loadingOlder, hasMoreOlder, view, activeDmId, activeGroupId, activeServerId, activeChannelId]);
+
+  const messageContext = useMemo(() => ({
+    type: view === VIEW_DM ? 'dm' : view === VIEW_GROUP ? 'group' : view === VIEW_SERVER ? 'server' : null,
+    dmId: activeDmId,
+    groupId: activeGroupId,
+    serverId: activeServerId,
+    channelId: activeChannelId,
+  }), [view, activeDmId, activeGroupId, activeServerId, activeChannelId]);
+
+  const handleReact = useCallback(async (msgId, emoji, alreadyActive) => {
+    if (!uid) return;
+    if (alreadyActive) await removeReaction(messageContext, msgId, emoji, uid);
+    else await addReaction(messageContext, msgId, emoji, uid);
+  }, [uid, messageContext]);
+
+  const handleEdit = useCallback(async (msgId, newText) => {
+    await editMessage(messageContext, msgId, newText);
+  }, [messageContext]);
+
+  const handleDelete = useCallback(async (msgId) => {
+    await deleteMessage(messageContext, msgId);
+  }, [messageContext]);
+
+  const handleReport = useCallback(async (msgId, messageText, targetUid, reason) => {
+    await submitMessageReport({ context: messageContext, msgId, messageText, targetUid, reason });
+  }, [messageContext]);
 
   const handleSend = useCallback(async (text) => {
     if (!text.trim()) return;
     const msg = { text: text.trim(), senderUsername: username };
-    if (view === VIEW_DM && activeDmId) {
-      await sendDmMessage(activeDmId, msg);
-    } else if (view === VIEW_GROUP && activeGroupId) {
-      await sendGroupMessage(activeGroupId, msg);
-    } else if (view === VIEW_SERVER && activeServerId && activeChannelId) {
+    if (view === VIEW_DM && activeDmId) await sendDmMessage(activeDmId, msg);
+    else if (view === VIEW_GROUP && activeGroupId) await sendGroupMessage(activeGroupId, msg);
+    else if (view === VIEW_SERVER && activeServerId && activeChannelId)
       await sendServerMessage(activeServerId, activeChannelId, msg);
-    }
   }, [view, activeDmId, activeGroupId, activeServerId, activeChannelId, username]);
 
   const handleGif = useCallback(async ({ gif, text }) => {
     const msg = { text: text || '', gif, senderUsername: username };
-    if (view === VIEW_DM && activeDmId) {
-      await sendDmMessage(activeDmId, msg);
-    } else if (view === VIEW_GROUP && activeGroupId) {
-      await sendGroupMessage(activeGroupId, msg);
-    } else if (view === VIEW_SERVER && activeServerId && activeChannelId) {
+    if (view === VIEW_DM && activeDmId) await sendDmMessage(activeDmId, msg);
+    else if (view === VIEW_GROUP && activeGroupId) await sendGroupMessage(activeGroupId, msg);
+    else if (view === VIEW_SERVER && activeServerId && activeChannelId)
       await sendServerMessage(activeServerId, activeChannelId, msg);
-    }
   }, [view, activeDmId, activeGroupId, activeServerId, activeChannelId, username]);
 
   const handleAttachment = useCallback(async (attachment) => {
     const msg = { ...attachment, senderUsername: username };
-    if (view === VIEW_DM && activeDmId) {
-      await sendDmMessage(activeDmId, msg);
-    } else if (view === VIEW_GROUP && activeGroupId) {
-      await sendGroupMessage(activeGroupId, msg);
-    } else if (view === VIEW_SERVER && activeServerId && activeChannelId) {
+    if (view === VIEW_DM && activeDmId) await sendDmMessage(activeDmId, msg);
+    else if (view === VIEW_GROUP && activeGroupId) await sendGroupMessage(activeGroupId, msg);
+    else if (view === VIEW_SERVER && activeServerId && activeChannelId)
       await sendServerMessage(activeServerId, activeChannelId, msg);
-    }
   }, [view, activeDmId, activeGroupId, activeServerId, activeChannelId, username]);
 
   const handleOpenDm = useCallback((dmId) => {
-    setView(VIEW_DM);
-    setActiveDmId(dmId);
-    setActiveServerId(null);
-    setActiveGroupId(null);
+    setView(VIEW_DM); setActiveDmId(dmId); setActiveServerId(null); setActiveGroupId(null);
   }, []);
 
   const handleOpenGroup = useCallback((groupId) => {
-    setView(VIEW_GROUP);
-    setActiveGroupId(groupId);
-    setActiveServerId(null);
-    setActiveDmId(null);
+    setView(VIEW_GROUP); setActiveGroupId(groupId); setActiveServerId(null); setActiveDmId(null);
   }, []);
 
   const handleOpenServer = useCallback((serverId, channelId) => {
-    setView(VIEW_SERVER);
-    setActiveServerId(serverId);
-    setActiveChannelId(channelId || 'general');
-    setActiveDmId(null);
-    setActiveGroupId(null);
+    setView(VIEW_SERVER); setActiveServerId(serverId);
+    setActiveChannelId(channelId || 'general'); setActiveDmId(null); setActiveGroupId(null);
   }, []);
 
   const handleOpenFriends = useCallback(() => {
-    setView(VIEW_FRIENDS);
-    setActiveServerId(null);
-    setActiveDmId(null);
-    setActiveGroupId(null);
+    setView(VIEW_FRIENDS); setActiveServerId(null); setActiveDmId(null); setActiveGroupId(null);
   }, []);
 
   const chatTitle = useMemo(() => {
@@ -250,9 +240,7 @@ export default function Chat() {
       const group = groupChats.find((g) => g.id === activeGroupId);
       return group?.name || 'Group Chat';
     }
-    if (view === VIEW_SERVER && activeServerId) {
-      return activeChannelId || 'general';
-    }
+    if (view === VIEW_SERVER && activeServerId) return activeChannelId || 'general';
     return 'Friends';
   }, [view, activeDmId, activeGroupId, activeServerId, activeChannelId, dmChannels, groupChats, uid, userCache]);
 
@@ -260,6 +248,9 @@ export default function Chat() {
   const statusColor = STATUS_COLORS[account?.status || 'online'];
   const incomingRequests = friendRequests.filter((r) => r.to === uid);
   const pendingCount = incomingRequests.length;
+
+  const userIsMod = account?.role === 'owner' || account?.role === 'admin' || account?.role === 'mod'
+    || account?.permissions?.moderate_chat === true;
 
   return (
     <div className="dc-layout">
@@ -316,6 +307,11 @@ export default function Chat() {
           hasMoreOlder={hasMoreOlder}
           loadingOlder={loadingOlder}
           onLoadOlder={handleLoadOlder}
+          onReact={handleReact}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onReport={handleReport}
+          isMod={userIsMod}
         />
       )}
 
@@ -339,12 +335,8 @@ export default function Chat() {
           </span>
         </div>
         <div className="dc-user-footer-actions">
-          <button className="dc-user-footer-btn" title="Settings">
-            <Settings size={16} />
-          </button>
-          <button className="dc-user-footer-btn" title="Log Out" onClick={logout}>
-            <LogOut size={16} />
-          </button>
+          <button className="dc-user-footer-btn" title="Settings"><Settings size={16} /></button>
+          <button className="dc-user-footer-btn" title="Log Out" onClick={logout}><LogOut size={16} /></button>
         </div>
       </div>
     </div>

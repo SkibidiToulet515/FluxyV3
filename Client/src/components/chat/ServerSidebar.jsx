@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, Plus, Compass } from 'lucide-react';
+import { Home, Plus, LogIn } from 'lucide-react';
 import CreateServerModal from './CreateServerModal';
+import JoinServerModal from './JoinServerModal';
 
 export default function ServerSidebar({
   servers = [],
@@ -12,6 +13,7 @@ export default function ServerSidebar({
 }) {
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
+  const [showJoin, setShowJoin] = useState(false);
 
   return (
     <div className="dc-server-bar">
@@ -32,10 +34,7 @@ export default function ServerSidebar({
           onClick={() => onSelectServer(server.id, server.channels?.[0]?.id || 'general')}
         >
           <span className="dc-server-pill" />
-          <div
-            className="dc-server-avatar"
-            style={{ '--server-color': 'var(--accent)' }}
-          >
+          <div className="dc-server-avatar" style={{ '--server-color': 'var(--accent)' }}>
             {server.icon ? (
               <img src={server.icon} alt="" className="dc-server-avatar-img" />
             ) : (
@@ -49,32 +48,27 @@ export default function ServerSidebar({
 
       <div className="dc-server-divider" />
 
-      <button
-        className="dc-server-icon"
-        title="Create Server"
-        onClick={() => setShowCreate(true)}
-      >
+      <button className="dc-server-icon" title="Create Server" onClick={() => setShowCreate(true)}>
         <span className="dc-server-pill" />
-        <div className="dc-server-avatar dc-server-add">
-          <Plus size={20} />
-        </div>
+        <div className="dc-server-avatar dc-server-add"><Plus size={20} /></div>
       </button>
 
-      <button
-        className="dc-server-icon"
-        onClick={() => navigate('/')}
-        title="Back to Dashboard"
-      >
+      <button className="dc-server-icon" title="Join Server" onClick={() => setShowJoin(true)}>
         <span className="dc-server-pill" />
-        <div className="dc-server-avatar">
-          <Home size={20} />
-        </div>
+        <div className="dc-server-avatar dc-server-add"><LogIn size={18} /></div>
       </button>
 
-      {showCreate && (
-        <CreateServerModal
-          onClose={() => setShowCreate(false)}
+      <button className="dc-server-icon" onClick={() => navigate('/')} title="Back to Dashboard">
+        <span className="dc-server-pill" />
+        <div className="dc-server-avatar"><Home size={20} /></div>
+      </button>
+
+      {showCreate && <CreateServerModal onClose={() => setShowCreate(false)} uid={uid} />}
+      {showJoin && (
+        <JoinServerModal
           uid={uid}
+          onClose={() => setShowJoin(false)}
+          onJoined={(serverId) => onSelectServer(serverId, 'general')}
         />
       )}
     </div>

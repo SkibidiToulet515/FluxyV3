@@ -10,6 +10,12 @@ import { uploadGameFile, deleteGameFileByPath } from './storage';
 /** Newest page size for realtime listeners; older pages use the same batch size. */
 export const CHAT_PAGE_SIZE = 50;
 
+export const DEFAULT_SERVER_ID = 'fluxy-community';
+const DEFAULT_SERVER_CHANNELS = [
+  { id: 'general', name: 'General' },
+  { id: 'memes', name: 'Memes' },
+];
+
 // ─── Users ────────────────────────────────────────────────────────────────────
 
 export async function createUserDoc(uid, data) {
@@ -404,6 +410,135 @@ export async function sendServerMessage(serverId, channelId, msg) {
     collection(db, 'servers', serverId, 'channels', channelId, 'messages'),
     messageData,
   );
+}
+
+// ─── Default Server (Fluxy Community) ─────────────────────────────────────────
+
+export async function ensureDefaultServer(uid) {
+  const ref = doc(db, 'servers', DEFAULT_SERVER_ID);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    try {
+      await setDoc(ref, {
+        name: 'Fluxy Community',
+        icon: null,
+        owner: uid,
+        members: [uid],
+        channels: DEFAULT_SERVER_CHANNELS,
+        createdAt: serverTimestamp(),
+      });
+    } catch {
+      const retry = await getDoc(ref);
+      if (retry.exists() && !retry.data().members?.includes(uid)) {
+        await updateDoc(ref, { members: arrayUnion(uid) });
+      }
+    }
+  } else if (!snap.data().members?.includes(uid)) {
+    await updateDoc(ref, { members: arrayUnion(uid) });
+  }
+}
+
+// ─── Server Invites ───────────────────────────────────────────────────────────
+
+function generateInviteCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+export async function createServerInvite(serverId, serverName, opts = {}) {
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new Error('Sign in required');
+  const code = generateInviteCode();
+  await setDoc(doc(db, 'serverInvites', code), {
+    serverId,
+    serverName: serverName || '',
+    createdBy: uid,
+    createdAt: serverTimestamp(),
+    expiresAt: opts.expiresAt || null,
+    maxUses: opts.maxUses ?? 0,
+    uses: 0,
+  });
+  return code;
+}
+
+export async function getServerInvite(inviteCode) {
+  const snap = await getDoc(doc(db, 'serverInvites', inviteCode));
+  return snap.exists() ? { code: snap.id, ...snap.data() } : null;
+}
+
+export async function useServerInvite(inviteCode, uid) {
+  const invite = await getServerInvite(inviteCode);
+  if (!invite) throw new Error('Invalid invite code');
+  if (invite.expiresAt) {
+    const expires = invite.expiresAt.toDate ? invite.expiresAt.toDate() : new Date(invite.expiresAt);
+    if (expires < new Date()) throw new Error('Invite has expired');
+  }
+  if (invite.maxUses > 0 && invite.uses >= invite.maxUses) throw new Error('Invite has reached max uses');
+  const serverRef = doc(db, 'servers', invite.serverId);
+  const serverSnap = await getDoc(serverRef);
+  if (!serverSnap.exists()) throw new Error('Server no longer exists');
+  if (serverSnap.data().members?.includes(uid)) throw new Error('Already a member');
+  await updateDoc(serverRef, { members: arrayUnion(uid) });
+  await updateDoc(doc(db, 'serverInvites', inviteCode), {
+    uses: (invite.uses || 0) + 1,
+  });
+  return invite.serverId;
+}
+
+// ─── Message Actions ──────────────────────────────────────────────────────────
+
+function resolveMessageRef(context, msgId) {
+  if (!context || !msgId) return null;
+  const { type, dmId, groupId, serverId, channelId } = context;
+  if (type === 'dm' && dmId) return doc(db, 'directMessages', dmId, 'messages', msgId);
+  if (type === 'group' && groupId) return doc(db, 'groupChats', groupId, 'messages', msgId);
+  if (type === 'server' && serverId && channelId)
+    return doc(db, 'servers', serverId, 'channels', channelId, 'messages', msgId);
+  return null;
+}
+
+export async function addReaction(context, msgId, emoji, uid) {
+  const ref = resolveMessageRef(context, msgId);
+  if (!ref) return;
+  await updateDoc(ref, { [`reactions.${emoji}`]: arrayUnion(uid) });
+}
+
+export async function removeReaction(context, msgId, emoji, uid) {
+  const ref = resolveMessageRef(context, msgId);
+  if (!ref) return;
+  await updateDoc(ref, { [`reactions.${emoji}`]: arrayRemove(uid) });
+}
+
+export async function editMessage(context, msgId, newText) {
+  const ref = resolveMessageRef(context, msgId);
+  if (!ref) return;
+  await updateDoc(ref, { text: newText, editedAt: serverTimestamp() });
+}
+
+export async function deleteMessage(context, msgId) {
+  const ref = resolveMessageRef(context, msgId);
+  if (!ref) return;
+  await deleteDoc(ref);
+}
+
+export async function submitMessageReport({ context, msgId, messageText, targetUid, reason }) {
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new Error('Sign in required');
+  await addDoc(collection(db, 'reports'), {
+    reporterUid: uid,
+    type: 'message',
+    messageId: msgId || null,
+    messageText: (messageText || '').slice(0, 500),
+    targetUid: targetUid || null,
+    channelType: context?.type || null,
+    channelId: context?.dmId || context?.groupId || context?.channelId || null,
+    serverId: context?.serverId || null,
+    reason: (reason || '').slice(0, 1000),
+    status: 'open',
+    createdAt: serverTimestamp(),
+  });
 }
 
 // ─── Game Metadata ────────────────────────────────────────────────────────────

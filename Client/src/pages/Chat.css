@@ -1443,6 +1443,272 @@
 .dc-user-footer-btn:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.08); }
 
 /* =============================================================================
+   Message Actions Toolbar
+   ============================================================================= */
+.dc-msg-actions {
+  position: absolute;
+  top: -14px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  animation: actionsIn 0.12s ease;
+}
+@keyframes actionsIn {
+  from { opacity: 0; transform: translateY(4px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.dc-msg-action-btn {
+  width: 30px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.dc-msg-action-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+.dc-action-danger:hover { color: #ef4444; background: rgba(239, 68, 68, 0.12); }
+.dc-action-warn:hover { color: #f59e0b; background: rgba(245, 158, 11, 0.12); }
+
+/* =============================================================================
+   Emoji Picker (inline quick picker)
+   ============================================================================= */
+.dc-emoji-picker {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  display: flex;
+  gap: 2px;
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+  z-index: 20;
+  animation: actionsIn 0.12s ease;
+}
+.dc-emoji-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.12s;
+}
+.dc-emoji-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.2);
+}
+
+/* =============================================================================
+   Reactions
+   ============================================================================= */
+.dc-reactions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.dc-reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.dc-reaction-chip:hover {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.08);
+}
+.dc-reaction-chip.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.dc-reaction-emoji { font-size: 0.9rem; }
+.dc-reaction-count { font-weight: 600; font-size: 0.7rem; }
+
+/* =============================================================================
+   Message Edit
+   ============================================================================= */
+.dc-msg-edit-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dc-msg-edit-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  outline: none;
+}
+.dc-msg-edit-actions {
+  display: flex;
+  gap: 4px;
+}
+.dc-msg-edit-save,
+.dc-msg-edit-cancel {
+  width: 28px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.dc-msg-edit-save { background: #34d399; color: #fff; }
+.dc-msg-edit-save:hover { background: #2dd4a8; }
+.dc-msg-edit-cancel { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.dc-msg-edit-cancel:hover { background: rgba(239, 68, 68, 0.35); }
+
+.dc-msg-edited {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.dc-msg-edited-inline {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+
+/* =============================================================================
+   Report Modal
+   ============================================================================= */
+.dc-report-modal { max-width: 380px; }
+.dc-report-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  outline: none;
+  resize: vertical;
+  min-height: 64px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.dc-report-input:focus { border-color: var(--accent); }
+.dc-report-input::placeholder { color: var(--text-muted); }
+.dc-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.dc-modal-cancel {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.dc-modal-cancel:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.06); }
+
+/* =============================================================================
+   Invite Section (sidebar)
+   ============================================================================= */
+.dc-invite-section {
+  padding: 8px;
+}
+.dc-invite-generate {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.dc-invite-generate:hover {
+  background: var(--accent);
+  color: #fff;
+}
+.dc-invite-generate:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.dc-invite-result {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+}
+.dc-invite-code {
+  flex: 1;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.05em;
+  user-select: all;
+}
+.dc-invite-copy {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.dc-invite-copy:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* =============================================================================
    Responsive
    ============================================================================= */
 @media (max-width: 900px) {

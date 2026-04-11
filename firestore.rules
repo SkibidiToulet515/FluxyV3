@@ -133,8 +133,12 @@ service cloud.firestore {
     }
 
     // ─── Friends ──────────────────────────────────────────────────────
+    // FIX: split read → get + list.
+    // get (single doc by exact ID) is safe because the ID is uid1_uid2 — you
+    // need to know both UIDs. list still requires membership.
     match /friends/{docId} {
-      allow read: if isAuth() && request.auth.uid in resource.data.users;
+      allow get: if isAuth();
+      allow list: if isAuth() && request.auth.uid in resource.data.users;
       allow create: if isAuth() && request.auth.uid in request.resource.data.users
         && request.resource.data.users.size() == 2
         && request.resource.data.status == 'pending'
@@ -154,7 +158,20 @@ service cloud.firestore {
         allow read: if isAuth();
         allow create: if isAuth()
           && request.resource.data.senderUid == request.auth.uid;
-        allow delete: if hasPerm('moderate_chat');
+        // Edit own message (text + editedAt only)
+        allow update: if isAuth()
+          && resource.data.senderUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['text', 'editedAt'])
+          && request.resource.data.senderUid == resource.data.senderUid;
+        // Toggle reactions (any authenticated user)
+        allow update: if isAuth()
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['reactions']);
+        // Delete own or moderate
+        allow delete: if isAuth()
+          && (resource.data.senderUid == request.auth.uid
+            || hasPerm('moderate_chat'));
       }
     }
 
@@ -171,7 +188,17 @@ service cloud.firestore {
         allow read: if isAuth();
         allow create: if isAuth()
           && request.resource.data.senderUid == request.auth.uid;
-        allow delete: if hasPerm('moderate_chat');
+        allow update: if isAuth()
+          && resource.data.senderUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['text', 'editedAt'])
+          && request.resource.data.senderUid == resource.data.senderUid;
+        allow update: if isAuth()
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['reactions']);
+        allow delete: if isAuth()
+          && (resource.data.senderUid == request.auth.uid
+            || hasPerm('moderate_chat'));
       }
     }
 
@@ -179,12 +206,18 @@ service cloud.firestore {
     match /servers/{serverId} {
       allow read: if isAuth();
       allow create: if isAuth()
-        && request.auth.uid == request.resource.data.owner
         && request.auth.uid in request.resource.data.members;
+      // Members/owner/mods can update, OR any user can add self to members (join)
       allow update: if isAuth()
-        && (request.auth.uid == resource.data.owner
+        && (
+          request.auth.uid == resource.data.owner
           || request.auth.uid in resource.data.members
-          || isMod());
+          || isMod()
+          || (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+            && request.auth.uid in request.resource.data.members
+          )
+        );
       allow delete: if isAdmin()
         || (isAuth() && request.auth.uid == resource.data.owner);
 
@@ -192,8 +225,29 @@ service cloud.firestore {
         allow read: if isAuth();
         allow create: if isAuth()
           && request.resource.data.senderUid == request.auth.uid;
-        allow delete: if hasPerm('moderate_chat');
+        allow update: if isAuth()
+          && resource.data.senderUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['text', 'editedAt'])
+          && request.resource.data.senderUid == resource.data.senderUid;
+        allow update: if isAuth()
+          && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['reactions']);
+        allow delete: if isAuth()
+          && (resource.data.senderUid == request.auth.uid
+            || hasPerm('moderate_chat'));
       }
+    }
+
+    // ─── Server Invites ───────────────────────────────────────────────
+    match /serverInvites/{inviteCode} {
+      allow read: if isAuth();
+      allow create: if isAuth()
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isAuth()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uses']);
+      allow delete: if isAuth()
+        && (resource.data.createdBy == request.auth.uid || isAdmin());
     }
 
     // ─── Games ────────────────────────────────────────────────────────

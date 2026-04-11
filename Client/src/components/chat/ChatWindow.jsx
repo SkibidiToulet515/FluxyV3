@@ -26,6 +26,11 @@ export default function ChatWindow({
   hasMoreOlder = false,
   loadingOlder = false,
   onLoadOlder,
+  onReact,
+  onEdit,
+  onDelete,
+  onReport,
+  isMod = false,
 }) {
   const messagesAreaRef = useRef(null);
   const bottomAnchorRef = useRef(null);
@@ -183,6 +188,12 @@ export default function ChatWindow({
               msg={msg}
               isOwn={msg.senderUid === currentUid}
               showAvatar={shouldShowAvatar(msg, i)}
+              currentUid={currentUid}
+              onReact={onReact}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onReport={onReport}
+              isMod={isMod}
             />
           ))}
           <div ref={bottomAnchorRef} className="dc-messages-bottom-anchor" />
@@ -215,23 +226,35 @@ export default function ChatWindow({
 }
 
 const MemoMessageRow = memo(
-  function MemoMessageRow({ msg, isOwn, showAvatar }) {
-    return (
-      <MessageItem
-        msg={msg}
-        isOwn={isOwn}
-        showAvatar={showAvatar}
-      />
-    );
+  function MemoMessageRow(props) {
+    return <MessageItem {...props} />;
   },
   (a, b) =>
     a.msg?.id === b.msg?.id
     && a.isOwn === b.isOwn
     && a.showAvatar === b.showAvatar
+    && a.currentUid === b.currentUid
+    && a.isMod === b.isMod
     && a.msg?.text === b.msg?.text
+    && a.msg?.editedAt?.seconds === b.msg?.editedAt?.seconds
     && a.msg?.gif?.id === b.msg?.gif?.id
     && a.msg?.image === b.msg?.image
     && a.msg?.attachment?.url === b.msg?.attachment?.url
     && a.msg?.createdAt?.seconds === b.msg?.createdAt?.seconds
-    && a.msg?.createdAt?.nanoseconds === b.msg?.createdAt?.nanoseconds,
+    && a.msg?.createdAt?.nanoseconds === b.msg?.createdAt?.nanoseconds
+    && reactionsEqual(a.msg?.reactions, b.msg?.reactions),
 );
+
+function reactionsEqual(a, b) {
+  if (a === b) return true;
+  if (!a || !b) return a === b;
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  for (const k of aKeys) {
+    const aArr = a[k]; const bArr = b[k];
+    if (!bArr || aArr.length !== bArr.length) return false;
+    for (let i = 0; i < aArr.length; i++) if (aArr[i] !== bArr[i]) return false;
+  }
+  return true;
+}
