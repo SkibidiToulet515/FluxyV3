@@ -66,6 +66,18 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
     }
 
+    // User custom backgrounds
+    match /backgrounds/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && fileName.matches('^' + request.auth.uid + '\\.[A-Za-z0-9]+$')
+        && request.resource.size < 15 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*')
+            || request.resource.contentType.matches('video/.*'));
+      allow delete: if request.auth != null
+        && fileName.matches('^' + request.auth.uid + '\\.[A-Za-z0-9]+$');
+    }
+
     // General media
     match /media/{path=**} {
       allow read: if request.auth != null;

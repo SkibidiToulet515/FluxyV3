@@ -6,7 +6,7 @@ import {
 import {
   searchUsers, sendFriendRequest, acceptFriendRequest,
   declineFriendRequest, cancelFriendRequest, removeFriend,
-  ensureDmChannel,
+  ensureDmChannel, getDmChannelId,
 } from '../../services/firestore';
 import UserAvatar from './UserAvatar';
 
@@ -72,9 +72,14 @@ export default function FriendsPanel({
     }
   }
 
-  async function handleAccept(docId) {
+  async function handleAccept(req) {
+    const docId = req.id;
     setBusyIds((p) => new Set(p).add(docId));
-    try { await acceptFriendRequest(docId); } catch { /* ignore */ }
+    try {
+      await acceptFriendRequest(docId);
+      const other = req.users?.find((u) => u !== uid);
+      if (other) onOpenDm(getDmChannelId(uid, other));
+    } catch { /* ignore */ }
     finally { setBusyIds((p) => { const s = new Set(p); s.delete(docId); return s; }); }
   }
 
@@ -97,8 +102,13 @@ export default function FriendsPanel({
   }
 
   async function handleMessageFriend(friendUid) {
-    const channelId = await ensureDmChannel(uid, friendUid);
-    onOpenDm(channelId);
+    try {
+      const channelId = await ensureDmChannel(uid, friendUid);
+      onOpenDm(channelId);
+    } catch {
+      const channelId = getDmChannelId(uid, friendUid);
+      onOpenDm(channelId);
+    }
   }
 
   return (
@@ -137,25 +147,41 @@ export default function FriendsPanel({
             ) : (
               <>
                 <div className="dc-section-label">ALL FRIENDS — {friendUids.length}</div>
+                <p className="dc-friends-dm-cue">Click a friend to open your direct message thread.</p>
                 {friendUids.map((fuid) => {
                   const u = userCache[fuid];
                   const docId = friends.find((f) => f.users.includes(fuid))?.id;
                   return (
-                    <div key={fuid} className="dc-friend-row">
+                    <div
+                      key={fuid}
+                      className="dc-friend-row dc-friend-row-open-dm"
+                      role="button"
+                      tabIndex={0}
+                      title="Open direct message"
+                      onClick={() => handleMessageFriend(fuid)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleMessageFriend(fuid);
+                        }
+                      }}
+                    >
                       <UserAvatar user={u} size={36} />
                       <div className="dc-friend-info">
                         <span className="dc-friend-name">{u?.username || 'User'}</span>
                         <span className="dc-friend-status">{u?.status || 'offline'}</span>
                       </div>
-                      <div className="dc-friend-actions">
+                      <div className="dc-friend-actions" onClick={(e) => e.stopPropagation()}>
                         <button
+                          type="button"
                           className="dc-friend-action-btn"
-                          title="Message"
+                          title="Open DM"
                           onClick={() => handleMessageFriend(fuid)}
                         >
                           <MessageSquare size={16} />
                         </button>
                         <button
+                          type="button"
                           className="dc-friend-action-btn dc-danger"
                           title="Remove Friend"
                           onClick={() => docId && handleRemove(docId)}
@@ -188,14 +214,16 @@ export default function FriendsPanel({
                       </div>
                       <div className="dc-friend-actions">
                         <button
+                          type="button"
                           className="dc-friend-action-btn dc-success"
                           title="Accept"
-                          onClick={() => handleAccept(req.id)}
+                          onClick={() => handleAccept(req)}
                           disabled={busyIds.has(req.id)}
                         >
                           <Check size={16} />
                         </button>
                         <button
+                          type="button"
                           className="dc-friend-action-btn dc-danger"
                           title="Decline"
                           onClick={() => handleDecline(req.id)}

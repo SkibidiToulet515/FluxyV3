@@ -1,57 +1,9 @@
 import { useState } from 'react';
 import {
-  Hash, Users, MessageSquare, UserPlus, Plus, ChevronDown, ChevronRight, Link2, Check, Copy,
+  Hash, Users, MessageSquare, UserPlus, Plus, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import CreateGroupModal from './CreateGroupModal';
 import UserAvatar from './UserAvatar';
-import { createServerInvite } from '../../services/firestore';
-
-function InviteSection({ serverId, serverName }) {
-  const [code, setCode] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [error, setError] = useState('');
-
-  const generate = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const c = await createServerInvite(serverId, serverName);
-      setCode(c);
-    } catch (err) {
-      setError(err.message || 'Failed to create invite');
-    }
-    setLoading(false);
-  };
-
-  const copy = () => {
-    if (!code) return;
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="dc-invite-section">
-      {!code ? (
-        <>
-          <button className="dc-invite-generate" onClick={generate} disabled={loading}>
-            <Link2 size={14} />
-            {loading ? 'Generating…' : 'Create Invite'}
-          </button>
-          {error && <div className="dc-modal-error" style={{ padding: '4px 8px', fontSize: '0.7rem' }}>{error}</div>}
-        </>
-      ) : (
-        <div className="dc-invite-result">
-          <code className="dc-invite-code">{code}</code>
-          <button className="dc-invite-copy" onClick={copy} title="Copy">
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function ChatSidebar({
   view,
@@ -95,9 +47,6 @@ export default function ChatSidebar({
               </div>
             </button>
           ))}
-
-          <div className="dc-section-label" style={{ marginTop: 16 }}>INVITE</div>
-          <InviteSection serverId={activeServerId} serverName={activeServer.name} />
         </div>
       </div>
     );

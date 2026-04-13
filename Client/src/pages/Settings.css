@@ -432,3 +432,66 @@
   color: var(--text-muted);
   margin: 0 0 0.5rem;
 }
+
+/* --- Toggle Rows --- */
+.settings-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.settings-toggle-row strong {
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+}
+
+.settings-toggle-row p {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* --- Background Controls --- */
+.settings-bg-controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.settings-bg-preview {
+  margin-bottom: 0.75rem;
+}
+
+.settings-error {
+  color: #ef4444;
+  font-size: 0.8125rem;
+  margin: 0.25rem 0;
+}
+
+.settings-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+/* --- Data Section --- */
+.settings-data-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.settings-data-msg {
+  font-size: 0.8125rem;
+  color: var(--accent);
+  margin: 0.25rem 0;
+}

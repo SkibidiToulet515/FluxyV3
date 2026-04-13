@@ -1,15 +1,29 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import themes from './index';
 
 const ThemeContext = createContext();
+
+function loadCustomTheme() {
+  try {
+    const raw = localStorage.getItem('fluxy-custom-theme');
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
 
 export function ThemeProvider({ children }) {
   const [currentTheme, setCurrentTheme] = useState(() => {
     return localStorage.getItem('fluxy-theme') || 'glassy';
   });
 
+  const [customThemeVars, setCustomThemeVars] = useState(loadCustomTheme);
+
+  const allThemes = { ...themes };
+  if (customThemeVars) {
+    allThemes.__custom = { name: 'Custom', vars: customThemeVars };
+  }
+
   useEffect(() => {
-    const theme = themes[currentTheme];
+    const theme = allThemes[currentTheme];
     if (!theme) return;
     const root = document.documentElement;
     Object.entries(theme.vars).forEach(([key, value]) => {
@@ -17,10 +31,22 @@ export function ThemeProvider({ children }) {
     });
     root.setAttribute('data-theme', currentTheme);
     localStorage.setItem('fluxy-theme', currentTheme);
-  }, [currentTheme]);
+  }, [currentTheme, customThemeVars]);
+
+  const saveCustomTheme = useCallback((vars) => {
+    setCustomThemeVars(vars);
+    localStorage.setItem('fluxy-custom-theme', JSON.stringify(vars));
+    setCurrentTheme('__custom');
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ currentTheme, setCurrentTheme, themes }}>
+    <ThemeContext.Provider value={{
+      currentTheme,
+      setCurrentTheme,
+      themes: allThemes,
+      saveCustomTheme,
+      customThemeVars,
+    }}>
       {children}
     </ThemeContext.Provider>
   );

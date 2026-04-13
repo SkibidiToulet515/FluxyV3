@@ -2,8 +2,9 @@ import express from 'express';
 import fs from 'fs/promises';
 import { getAdminFirestore, isFirebaseAdminReady } from '../config/firebase.js';
 import { UGS_DIR } from '../config/paths.js';
+import { inferSubject, normalizeSubject } from '../lib/gameSubject.js';
 
-/** @type {{ at: number, data: Array<{ id: string, name: string, file: string, category: string, playUrl?: string | null }> } | null} */
+/** @type {{ at: number, data: Array<{ id: string, name: string, file: string, category: string, subject: string, playUrl?: string | null }> } | null} */
 let mergedCache = null;
 const MERGE_TTL_MS = 45_000;
 
@@ -327,11 +328,16 @@ async function loadFirestoreGamesList() {
       const file = fileFromFirestoreUrl(url);
       const playUrl = /^https?:\/\//i.test(url) && !file ? url : null;
       if (!file && !playUrl) continue;
+      const cat = mapFirestoreCategory(d.category);
+      const nameLower = title.toLowerCase();
+      const subject =
+        normalizeSubject(d.subject) || inferSubject(nameLower, cat);
       out.push({
         id: doc.id,
         name: title,
         file: file || '',
-        category: mapFirestoreCategory(d.category),
+        category: cat,
+        subject,
         playUrl,
         thumbnail: d.thumbnail || null,
       });
@@ -353,11 +359,13 @@ async function scanGames() {
   return htmlFiles.map((file) => {
     const name = toDisplayName(file);
     const nameLower = name.toLowerCase();
+    const category = categorize(nameLower);
     return {
       id: fileId(file),
       name,
       file,
-      category: categorize(nameLower),
+      category,
+      subject: inferSubject(nameLower, category),
       playUrl: null,
     };
   });
@@ -366,11 +374,20 @@ async function scanGames() {
 function mergeGameLists(fsGames, dbGames) {
   const byKey = new Map();
   for (const g of fsGames) {
-    byKey.set(`f:${g.file}`, g);
+    byKey.set(`f:${g.file}`, { ...g });
   }
   for (const g of dbGames) {
     const key = g.file ? `f:${g.file}` : `d:${g.id}`;
-    if (!byKey.has(key)) byKey.set(key, g);
+    if (!byKey.has(key)) {
+      byKey.set(key, g);
+    } else if (g.file) {
+      const existing = byKey.get(key);
+      const merged = { ...existing };
+      if (g.subject) merged.subject = g.subject;
+      if (g.category && g.category !== 'Arcade') merged.category = g.category;
+      if (g.thumbnail) merged.thumbnail = g.thumbnail;
+      byKey.set(key, merged);
+    }
   }
   return [...byKey.values()].sort((a, b) =>
     a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
@@ -412,7 +429,9 @@ router.get('/search', async (req, res, next) => {
       (g) =>
         g.name.toLowerCase().includes(q) ||
         (g.file || '').toLowerCase().includes(q) ||
-        g.id.toLowerCase().includes(q),
+        g.id.toLowerCase().includes(q) ||
+        (g.subject && g.subject.toLowerCase().includes(q)) ||
+        (g.category && g.category.toLowerCase().includes(q)),
     );
     res.json(filtered);
   } catch (err) {

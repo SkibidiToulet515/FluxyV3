@@ -17,6 +17,7 @@ import {
   ensureDefaultServer,
   addReaction, removeReaction,
   editMessage, deleteMessage, submitMessageReport,
+  backfillFriendDms,
 } from '../services/firestore';
 import './Chat.css';
 
@@ -94,6 +95,20 @@ export default function Chat() {
     ];
     return () => unsubs.forEach((u) => u());
   }, [uid]);
+
+  const backfillTimerRef = useRef(null);
+  useEffect(() => {
+    if (!uid || !friends.length) return;
+    if (backfillTimerRef.current) clearTimeout(backfillTimerRef.current);
+    backfillTimerRef.current = setTimeout(() => {
+      backfillFriendDms(uid, friends).catch((err) =>
+        console.warn('[Fluxy] backfillFriendDms error:', err.message),
+      );
+    }, 500);
+    return () => {
+      if (backfillTimerRef.current) clearTimeout(backfillTimerRef.current);
+    };
+  }, [uid, friends]);
 
   useEffect(() => {
     if (!uid) return;
@@ -223,6 +238,16 @@ export default function Chat() {
     setView(VIEW_FRIENDS); setActiveServerId(null); setActiveDmId(null); setActiveGroupId(null);
   }, []);
 
+  const handleAfterServerRemoved = useCallback((removedServerId) => {
+    if (activeServerId === removedServerId) {
+      setView(VIEW_FRIENDS);
+      setActiveServerId(null);
+      setActiveChannelId('general');
+      setActiveDmId(null);
+      setActiveGroupId(null);
+    }
+  }, [activeServerId]);
+
   const chatTitle = useMemo(() => {
     if (view === VIEW_DM && activeDmId) {
       const dm = dmChannels.find((d) => d.id === activeDmId);
@@ -253,6 +278,11 @@ export default function Chat() {
         onSelectServer={handleOpenServer}
         onSelectHome={handleOpenFriends}
         uid={uid}
+        friends={friends}
+        groupChats={groupChats}
+        userCache={userCache}
+        username={username}
+        onAfterServerRemoved={handleAfterServerRemoved}
       />
 
       <ChatSidebar

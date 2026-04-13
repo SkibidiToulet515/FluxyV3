@@ -174,3 +174,30 @@ export async function deleteGameFileByPath(storagePath) {
   const storageRef = ref(storage, storagePath);
   try { await deleteObject(storageRef); } catch { /* ignore */ }
 }
+
+const MAX_BG_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_BG_VIDEO_SIZE = 15 * 1024 * 1024;
+const ALLOWED_BG_IMAGE = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const ALLOWED_BG_VIDEO = ['video/mp4', 'video/webm'];
+
+export async function uploadUserBackground(uid, file) {
+  if (!uid || !file) throw new Error('Missing uid or file');
+  const isVideo = ALLOWED_BG_VIDEO.includes(file.type);
+  const isImage = ALLOWED_BG_IMAGE.includes(file.type);
+  if (!isVideo && !isImage) throw new Error('Unsupported file type. Use JPG, PNG, WebP, GIF, MP4, or WebM.');
+  if (isImage && file.size > MAX_BG_IMAGE_SIZE) throw new Error('Image must be under 5 MB.');
+  if (isVideo && file.size > MAX_BG_VIDEO_SIZE) throw new Error('Video must be under 15 MB.');
+  const ext = file.name.split('.').pop() || (isVideo ? 'mp4' : 'png');
+  const path = `backgrounds/${uid}.${ext}`;
+  const storageRef = ref(storage, path);
+  await uploadBytes(storageRef, file, { contentType: file.type });
+  const url = await getDownloadURL(storageRef);
+  return { url, type: isVideo ? 'video' : 'image', path };
+}
+
+export async function deleteUserBackground(uid) {
+  const exts = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'mp4', 'webm'];
+  for (const ext of exts) {
+    try { await deleteObject(ref(storage, `backgrounds/${uid}.${ext}`)); } catch { /* ignore */ }
+  }
+}

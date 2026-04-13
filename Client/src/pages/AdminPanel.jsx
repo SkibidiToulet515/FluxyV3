@@ -18,6 +18,7 @@ import {
 } from '../utils/permissions';
 import { roleTierFromDefinition, tierRank } from '../lib/rbacClient';
 import { normalizeFirestoreGameUrlInput } from '../utils/gamePlayUrl';
+import { SUBJECT_KEYS } from '../config/subjects';
 import Header from '../components/Header';
 import './AdminPanel.css';
 
@@ -217,7 +218,8 @@ export function GameManagement() {
 
   const filtered = games.filter((g) =>
     g.title?.toLowerCase().includes(search.toLowerCase()) ||
-    g.category?.toLowerCase().includes(search.toLowerCase())
+    g.category?.toLowerCase().includes(search.toLowerCase()) ||
+    (g.subject && g.subject.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
@@ -267,7 +269,7 @@ export function GameManagement() {
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
-              <tr><th>Title</th><th>Category</th><th>Plays</th><th>Visible</th><th>Actions</th></tr>
+              <tr><th>Title</th><th>Category</th><th>Subject</th><th>Plays</th><th>Visible</th><th>Actions</th></tr>
             </thead>
             <tbody>
               {filtered.map((g) => (
@@ -282,6 +284,7 @@ export function GameManagement() {
                     </div>
                   </td>
                   <td><span className="admin-category-pill">{g.category || 'Uncategorized'}</span></td>
+                  <td><span className="admin-category-pill">{g.subject || '—'}</span></td>
                   <td className="admin-muted">{g.plays ?? 0}</td>
                   <td>{g.visible !== false ? <Eye size={14} className="admin-visible" /> : <EyeOff size={14} className="admin-hidden" />}</td>
                   <td>
@@ -304,7 +307,7 @@ export function GameManagement() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={5} className="admin-empty">No games found</td></tr>
+                <tr><td colSpan={6} className="admin-empty">No games found</td></tr>
               )}
             </tbody>
           </table>
@@ -317,6 +320,7 @@ export function GameManagement() {
 function GameForm({ initial, onSave, onCancel }) {
   const [title, setTitle] = useState(initial?.title || '');
   const [category, setCategory] = useState(initial?.category || 'Uncategorized');
+  const [subject, setSubject] = useState(initial?.subject || '');
   const [description, setDescription] = useState(initial?.description || '');
   const [thumbnail, setThumbnail] = useState(initial?.thumbnail || '');
   const [url, setUrl] = useState(initial?.url || '');
@@ -336,6 +340,7 @@ function GameForm({ initial, onSave, onCancel }) {
         {
           title: title.trim(),
           category,
+          subject: subject || null,
           description: description.trim(),
           thumbnail: thumbnail.trim(),
           url: normalizeFirestoreGameUrlInput(urlTrim),
@@ -364,6 +369,15 @@ function GameForm({ initial, onSave, onCancel }) {
           <span>Category</span>
           <select value={category} onChange={(e) => setCategory(e.target.value)}>
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </label>
+        <label>
+          <span>Subject</span>
+          <select value={subject} onChange={(e) => setSubject(e.target.value)}>
+            <option value="">Auto (infer from title)</option>
+            {SUBJECT_KEYS.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
           </select>
         </label>
         <label className="span-2">

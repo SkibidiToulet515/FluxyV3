@@ -1,0 +1,61 @@
+html.custom-cursor-active,
+html.custom-cursor-active * {
+  cursor: none !important;
+}
+
+.cc-dot,
+.cc-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 99999;
+  will-change: transform, opacity;
+}
+
+.cc-dot {
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--accent, #6366f1);
+  box-shadow: 0 0 6px var(--accent, #6366f1);
+}
+
+.cc-ring {
+  width: 32px;
+  height: 32px;
+  margin-left: -16px;
+  margin-top: -16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent, #6366f1);
+  opacity: 0.5;
+  transition: width 0.2s ease, height 0.2s ease, margin 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+
+.cc-ring-hover {
+  width: 48px;
+  height: 48px;
+  margin-left: -24px;
+  margin-top: -24px;
+  border-color: var(--accent-hover, #818cf8);
+  opacity: 0.3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cc-ring {
+    transition: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .cc-dot,
+  .cc-ring {
+    display: none;
+  }
+  html.custom-cursor-active,
+  html.custom-cursor-active * {
+    cursor: auto !important;
+  }
+}

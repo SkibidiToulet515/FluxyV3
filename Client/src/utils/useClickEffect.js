@@ -44,12 +44,14 @@ function drawTriangle(ctx, cx, cy, s) {
   ctx.fill();
 }
 
-export default function useClickEffect() {
+export default function useClickEffect(enabled = true) {
   const particlesRef = useRef([]);
   const rafRef = useRef(0);
   const activeRef = useRef(false);
 
   useEffect(() => {
+    if (!enabled) return undefined;
+
     const canvas = document.createElement('canvas');
     canvas.style.cssText =
       'position:fixed;inset:0;z-index:9999;pointer-events:none;width:100%;height:100%';
@@ -167,17 +169,17 @@ export default function useClickEffect() {
       }
     }
 
-    function handleClick(e) {
+    function handlePointerDown(e) {
       spawn(e.clientX, e.clientY);
     }
 
-    document.addEventListener('click', handleClick);
+    document.addEventListener('pointerdown', handlePointerDown, { capture: true });
 
     return () => {
-      document.removeEventListener('click', handleClick);
+      document.removeEventListener('pointerdown', handlePointerDown, { capture: true });
       window.removeEventListener('resize', resize);
       cancelAnimationFrame(rafRef.current);
       canvas.remove();
     };
-  }, []);
+  }, [enabled]);
 }

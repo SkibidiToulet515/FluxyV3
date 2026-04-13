@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { TrendingUp, Clock, Star, ArrowRight, Gamepad2 } from 'lucide-react';
+import { TrendingUp, Clock, Star, ArrowRight, Gamepad2, Globe } from 'lucide-react';
 import Header from '../components/Header';
 import GameCard from '../components/GameCard';
 import { fetchGames, getRecentlyPlayed } from '../utils/api';
@@ -40,11 +40,17 @@ export default function Home() {
       <section className="hero-banner glass-card">
         <div className="hero-content">
           <h2>Welcome to Fluxy</h2>
-          <p>Your premium game hub with thousands of games ready to play instantly.</p>
-          <button className="btn btn-primary" onClick={() => navigate('/games')}>
-            <Gamepad2 size={18} />
-            Browse Games
-          </button>
+          <p>Your premium learning hub with interactive content across every subject.</p>
+          <div className="hero-actions">
+            <button className="btn btn-primary" onClick={() => navigate('/math')}>
+              <Gamepad2 size={18} />
+              Games
+            </button>
+            <button className="btn btn-secondary" onClick={() => navigate('/proxy')}>
+              <Globe size={18} />
+              Proxy
+            </button>
+          </div>
         </div>
         <div className="hero-stats">
           <div className="stat">
@@ -84,7 +90,7 @@ export default function Home() {
             <Star size={20} />
             <h3>Featured</h3>
           </div>
-          <button className="btn btn-ghost" onClick={() => navigate('/games')}>
+          <button className="btn btn-ghost" onClick={() => navigate('/math')}>
             View All <ArrowRight size={16} />
           </button>
         </div>

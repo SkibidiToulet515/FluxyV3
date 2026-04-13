@@ -18,6 +18,8 @@
    1. SERVER SIDEBAR
    ============================================================================= */
 .dc-server-bar {
+  position: relative;
+  z-index: 50;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -111,6 +113,66 @@
   background: var(--server-color, var(--accent));
   color: #fff;
 }
+
+.dc-server-entry {
+  position: relative;
+  width: 72px;
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  z-index: 2;
+}
+.dc-server-icon-main {
+  width: 52px;
+  min-width: 52px;
+}
+.dc-server-kebab {
+  flex-shrink: 0;
+  width: 18px;
+  height: 44px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.dc-server-kebab:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.dc-server-kebab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.dc-kebab-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  pointer-events: none;
+}
+.dc-kebab-dot {
+  display: block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
 .dc-server-avatar-img {
   width: 100%;
   height: 100%;
@@ -1034,6 +1096,14 @@
   font-size: 0.8125rem;
 }
 
+.dc-friends-dm-cue {
+  margin: -4px 0 10px 2px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
 .dc-friend-row {
   display: flex;
   align-items: center;
@@ -1044,6 +1114,17 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 .dc-friend-row:hover { background: rgba(255, 255, 255, 0.04); }
+
+.dc-friend-row-open-dm {
+  cursor: pointer;
+  outline: none;
+}
+.dc-friend-row-open-dm:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.dc-friend-row-open-dm:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
 
 .dc-friend-info {
   flex: 1;
@@ -1182,7 +1263,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  /* Above AppShell click-effect canvas (z-index 9999); below server action menu */
+  z-index: 10050;
   animation: fadeIn 0.15s ease;
 }
 @keyframes fadeIn {
@@ -1265,6 +1347,47 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.dc-modal-hint {
+  margin: 0 0 12px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.dc-join-server-hint {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dc-invite-server-scope {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.dc-invite-server-scope-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.dc-invite-server-scope-name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.dc-invite-server-scope-note {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-muted);
 }
 
 .dc-modal-label {
@@ -1643,6 +1766,518 @@
 .dc-modal-cancel:hover { color: var(--text-primary); background: rgba(255, 255, 255, 0.06); }
 
 /* =============================================================================
+   Server action menu (anchored portal)
+   ============================================================================= */
+.dc-server-menu {
+  position: fixed;
+  z-index: 200000;
+  isolation: isolate;
+  min-width: 232px;
+  max-width: 288px;
+  padding: 0;
+  overflow: hidden;
+  background: linear-gradient(
+    155deg,
+    rgba(32, 32, 40, 0.97) 0%,
+    rgba(18, 18, 24, 0.98) 100%
+  );
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 4px 24px rgba(0, 0, 0, 0.35),
+    0 24px 56px rgba(0, 0, 0, 0.45);
+  animation: dcServerMenuIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dc-server-menu {
+    animation: none;
+  }
+}
+@keyframes dcServerMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+.dc-server-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    transparent 100%
+  );
+}
+.dc-server-menu-header-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+.dc-server-menu-header-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dc-server-menu-header-letter {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+.dc-server-menu-header-text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.dc-server-menu-header-name {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dc-server-menu-header-role {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.dc-server-menu-header-role.owner {
+  color: rgba(52, 211, 153, 0.95);
+}
+.dc-server-menu-body {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dc-server-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 11px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: rgba(244, 244, 245, 0.95);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.15s ease,
+    transform 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dc-server-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.dc-server-menu-item:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0 0 2px rgba(0, 0, 0, 0.45),
+    0 0 0 4px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.dc-server-menu-item:active {
+  transform: scale(0.985);
+}
+.dc-server-menu-item.danger {
+  color: #fb7185;
+}
+.dc-server-menu-item.danger:hover {
+  background: rgba(251, 113, 133, 0.12);
+  color: #fda4af;
+}
+.dc-server-menu-icon {
+  flex-shrink: 0;
+  opacity: 0.88;
+  color: rgba(228, 228, 231, 0.85);
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+.dc-server-menu-item:hover .dc-server-menu-icon {
+  opacity: 1;
+  color: var(--text-primary);
+}
+.dc-server-menu-item.danger .dc-server-menu-icon {
+  color: #fb7185;
+  opacity: 1;
+}
+.dc-server-menu-item-label {
+  flex: 1;
+  min-width: 0;
+}
+.dc-server-menu-divider {
+  height: 1px;
+  margin: 4px 10px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08) 20%,
+    rgba(255, 255, 255, 0.08) 80%,
+    transparent
+  );
+}
+.dc-server-menu-divider-loose {
+  margin-top: 6px;
+  margin-bottom: 2px;
+}
+
+/* =============================================================================
+   Server settings / share invite / invite code / confirm modals
+   ============================================================================= */
+.dc-server-settings-modal {
+  max-width: 480px;
+}
+.dc-server-settings-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 0 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.dc-server-settings-tabs button {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.dc-server-settings-tabs button:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.07);
+}
+.dc-server-settings-tabs button.active {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.dc-server-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dc-channel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+.dc-channel-list-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+}
+.dc-channel-list-hash {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.dc-channel-list-name {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dc-channel-list-id {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  max-width: 88px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dc-channel-list-remove {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.dc-channel-list-remove:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.28);
+}
+.dc-channel-list-remove:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.dc-channel-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.dc-channel-add-row .dc-modal-input {
+  flex: 1;
+}
+.dc-channel-add-btn {
+  width: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--accent-soft);
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.dc-channel-add-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.dc-share-invite-modal {
+  max-width: 420px;
+}
+.dc-share-invite-code-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: var(--accent);
+}
+.dc-share-invite-code-loading .spin {
+  animation: spin 1s linear infinite;
+}
+.dc-share-invite-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+}
+.dc-share-invite-code-row code,
+.dc-share-invite-code-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+  user-select: all;
+  font-variant-numeric: tabular-nums;
+}
+.dc-share-invite-tabs {
+  display: flex;
+  gap: 8px;
+}
+.dc-share-invite-tabs button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.dc-share-invite-tabs button:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.07);
+}
+.dc-share-invite-tabs button.active {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.dc-share-invite-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+.dc-share-invite-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: border-color 0.15s, background 0.15s;
+}
+.dc-share-invite-row:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+.dc-share-invite-name {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dc-share-invite-group-ico {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.dc-share-invite-send {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  min-width: 72px;
+}
+.dc-share-invite-send:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+}
+.dc-share-invite-send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.dc-share-invite-close {
+  align-self: flex-end;
+  margin-top: 4px;
+}
+
+.dc-invite-code-modal {
+  max-width: 400px;
+}
+.dc-invite-code-hint {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
+}
+.dc-invite-code-hint strong {
+  color: var(--text-primary);
+}
+.dc-invite-code-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  color: var(--accent);
+}
+.dc-invite-code-loading .spin {
+  animation: spin 1s linear infinite;
+}
+.dc-invite-result-lg {
+  padding: 14px 16px;
+}
+.dc-invite-result-lg .dc-invite-code {
+  font-size: 1rem;
+}
+.dc-invite-firestore-bind {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+  text-align: center;
+}
+.dc-invite-firestore-bind strong {
+  color: var(--text-secondary);
+}
+.dc-invite-bind-warn {
+  color: #f87171;
+  font-weight: 600;
+}
+.dc-share-invite-bind {
+  text-align: center;
+  margin-top: 6px;
+}
+
+.dc-confirm-modal {
+  max-width: 400px;
+}
+.dc-confirm-text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.dc-confirm-actions {
+  margin-top: 8px;
+}
+.dc-confirm-danger {
+  background: #dc2626 !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+.dc-confirm-danger:hover:not(:disabled) {
+  filter: brightness(1.08) !important;
+}
+
+/* =============================================================================
    Invite Section (sidebar)
    ============================================================================= */
 .dc-invite-section {
@@ -1685,9 +2320,11 @@
   flex: 1;
   font-size: 0.8rem;
   font-weight: 700;
+  font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
   color: var(--text-primary);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   user-select: all;
+  font-variant-numeric: tabular-nums;
 }
 .dc-invite-copy {
   width: 28px;
@@ -1722,6 +2359,27 @@
   .dc-chat-sidebar { display: none; }
   .dc-user-footer { display: none; }
   .dc-server-bar { width: 56px; }
+  .dc-server-entry {
+    width: 56px;
+    height: 48px;
+    gap: 1px;
+  }
+  .dc-server-icon-main {
+    width: 40px;
+    min-width: 40px;
+  }
+  .dc-server-kebab {
+    width: 14px;
+    height: 40px;
+    border-radius: 6px;
+  }
+  .dc-kebab-icon {
+    gap: 2px;
+  }
+  .dc-kebab-dot {
+    width: 2.5px;
+    height: 2.5px;
+  }
   .dc-server-avatar { width: 40px; height: 40px; }
   .dc-server-logo { width: 40px; height: 40px; font-size: 1rem; }
 }

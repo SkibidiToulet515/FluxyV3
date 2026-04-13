@@ -1,17 +1,18 @@
 import { useEffect, useRef } from 'react';
 import './Background.css';
 
-const STAR_COUNT = 200;
-const NEBULA_COUNT = 5;
-const SHOOTING_STAR_INTERVAL = 3200;
+const METEOR_COUNT = 18;
+const PARTICLE_COUNT = 60;
+const SPAWN_INTERVAL = 280;
 
 export default function Background() {
   const canvasRef = useRef(null);
-  const stateRef = useRef({ stars: [], nebulae: [], shootingStars: [] });
+  const stateRef = useRef({ meteors: [], particles: [] });
   const rafRef = useRef(0);
-  const mouseRef = useRef({ x: 0, y: 0 });
+  const reducedMotion = useRef(false);
 
   useEffect(() => {
+    reducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -20,17 +21,6 @@ export default function Background() {
     function resize() {
       w = canvas.width = window.innerWidth;
       h = canvas.height = window.innerHeight;
-      init();
-    }
-
-    function getThemeColors() {
-      const s = getComputedStyle(document.documentElement);
-      const hex = (v, fb) => s.getPropertyValue(v).trim() || fb;
-      return {
-        start: hexToRgb(hex('--gradient-start', '#6366f1')),
-        end: hexToRgb(hex('--gradient-end', '#8b5cf6')),
-        accent: hexToRgb(hex('--accent', '#6366f1')),
-      };
     }
 
     function hexToRgb(hex) {
@@ -40,138 +30,148 @@ export default function Background() {
       return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
     }
 
-    function init() {
-      const st = stateRef.current;
-      st.stars = Array.from({ length: STAR_COUNT }, () => ({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        size: 0.3 + Math.random() * 1.8,
-        twinkleSpeed: 0.5 + Math.random() * 2,
-        twinklePhase: Math.random() * Math.PI * 2,
-        depth: 0.2 + Math.random() * 0.8,
-      }));
-      st.nebulae = Array.from({ length: NEBULA_COUNT }, (_, i) => ({
-        x: (w * (i + 0.5)) / NEBULA_COUNT + (Math.random() - 0.5) * w * 0.3,
-        y: h * 0.25 + Math.random() * h * 0.5,
-        radius: 220 + Math.random() * 320,
-        vx: (Math.random() - 0.5) * 0.25,
-        vy: (Math.random() - 0.5) * 0.18,
-        phase: Math.random() * Math.PI * 2,
-        useEnd: i % 2 === 1,
-      }));
-      st.shootingStars = [];
+    function getThemeColors() {
+      const s = getComputedStyle(document.documentElement);
+      const v = (k, fb) => s.getPropertyValue(k).trim() || fb;
+      return {
+        start: hexToRgb(v('--gradient-start', '#6366f1')),
+        end: hexToRgb(v('--gradient-end', '#8b5cf6')),
+        accent: hexToRgb(v('--accent', '#6366f1')),
+      };
     }
 
-    function spawnShootingStar() {
+    function spawnMeteor() {
       const st = stateRef.current;
-      if (st.shootingStars.length >= 2) return;
-      const angle = -0.3 - Math.random() * 0.5;
-      const speed = 7 + Math.random() * 7;
-      st.shootingStars.push({
-        x: Math.random() * w * 1.2,
-        y: -10,
+      if (st.meteors.length >= METEOR_COUNT) return;
+      const depth = 0.3 + Math.random() * 0.7;
+      const speed = (3 + Math.random() * 5) * depth;
+      const angle = Math.PI * (0.72 + Math.random() * 0.12);
+      st.meteors.push({
+        x: Math.random() * (w + 400) - 100,
+        y: -20 - Math.random() * h * 0.4,
         vx: Math.cos(angle) * speed,
         vy: -Math.sin(angle) * speed,
+        size: (1 + Math.random() * 2.5) * depth,
+        tailLen: (80 + Math.random() * 120) * depth,
         life: 0,
-        maxLife: 40 + Math.random() * 30,
-        size: 1 + Math.random() * 1.5,
+        maxLife: 120 + Math.random() * 100,
+        depth,
+        useEnd: Math.random() > 0.5,
       });
     }
 
-    let shootingTimer = setInterval(spawnShootingStar, SHOOTING_STAR_INTERVAL);
-
-    function onMouseMove(e) {
-      mouseRef.current.x = e.clientX;
-      mouseRef.current.y = e.clientY;
+    function spawnParticle(x, y, colors) {
+      const st = stateRef.current;
+      if (st.particles.length >= PARTICLE_COUNT) return;
+      const [r, g, b] = Math.random() > 0.5 ? colors.start : colors.end;
+      st.particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 1.2,
+        vy: (Math.random() - 0.5) * 1.2,
+        size: 0.5 + Math.random() * 1.5,
+        life: 0,
+        maxLife: 40 + Math.random() * 40,
+        r, g, b,
+      });
     }
-    window.addEventListener('mousemove', onMouseMove, { passive: true });
 
+    let spawnTimer = setInterval(spawnMeteor, SPAWN_INTERVAL);
     resize();
     window.addEventListener('resize', resize);
 
-    function draw(time) {
+    if (reducedMotion.current) {
       ctx.clearRect(0, 0, w, h);
-      const { stars, nebulae, shootingStars } = stateRef.current;
       const colors = getThemeColors();
-      const mx = mouseRef.current.x;
-      const my = mouseRef.current.y;
+      const grad = ctx.createLinearGradient(w, 0, 0, h);
+      const [sr, sg, sb] = colors.start;
+      const [er, eg, eb] = colors.end;
+      grad.addColorStop(0, `rgba(${sr},${sg},${sb},0.08)`);
+      grad.addColorStop(1, `rgba(${er},${eg},${eb},0.04)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+      return () => {
+        clearInterval(spawnTimer);
+        window.removeEventListener('resize', resize);
+      };
+    }
 
-      for (const neb of nebulae) {
-        neb.x += neb.vx;
-        neb.y += neb.vy;
-        if (neb.x < -neb.radius) neb.x = w + neb.radius;
-        if (neb.x > w + neb.radius) neb.x = -neb.radius;
-        if (neb.y < -neb.radius) neb.y = h + neb.radius;
-        if (neb.y > h + neb.radius) neb.y = -neb.radius;
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      const { meteors, particles } = stateRef.current;
+      const colors = getThemeColors();
 
-        const pulse = Math.sin(time * 0.0004 + neb.phase) * 0.22 + 1;
-        const r = neb.radius * pulse;
-        const [cr, cg, cb] = neb.useEnd ? colors.end : colors.start;
+      for (let i = meteors.length - 1; i >= 0; i--) {
+        const m = meteors[i];
+        m.x += m.vx;
+        m.y -= m.vy;
+        m.life++;
 
-        const grad = ctx.createRadialGradient(neb.x, neb.y, 0, neb.x, neb.y, r);
-        grad.addColorStop(0, `rgba(${cr},${cg},${cb},0.07)`);
-        grad.addColorStop(0.35, `rgba(${cr},${cg},${cb},0.03)`);
-        grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(neb.x, neb.y, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      const [ar, ag, ab] = colors.accent;
-      for (const star of stars) {
-        const parallax = star.depth * 0.02;
-        const sx = star.x + (mx - w / 2) * parallax;
-        const sy = star.y + (my - h / 2) * parallax;
-
-        const twinkle =
-          0.3 + 0.7 * ((Math.sin(time * 0.001 * star.twinkleSpeed + star.twinklePhase) + 1) / 2);
-        const alpha = twinkle * (0.4 + star.depth * 0.6);
-
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = `rgb(${200 + ar * 0.2},${200 + ag * 0.2},${210 + ab * 0.15})`;
-        ctx.beginPath();
-        ctx.arc(sx, sy, star.size, 0, Math.PI * 2);
-        ctx.fill();
-
-        if (star.size > 1.2 && twinkle > 0.85) {
-          ctx.globalAlpha = alpha * 0.3;
-          ctx.beginPath();
-          ctx.arc(sx, sy, star.size * 3, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-      ctx.globalAlpha = 1;
-
-      for (let i = shootingStars.length - 1; i >= 0; i--) {
-        const ss = shootingStars[i];
-        ss.x += ss.vx;
-        ss.y += ss.vy;
-        ss.life++;
-        if (ss.life > ss.maxLife || ss.x > w + 50 || ss.y > h + 50) {
-          shootingStars.splice(i, 1);
+        if (m.life > m.maxLife || m.x < -200 || m.x > w + 200 || m.y > h + 200) {
+          meteors.splice(i, 1);
           continue;
         }
-        const progress = ss.life / ss.maxLife;
-        const alpha = progress < 0.3 ? progress / 0.3 : 1 - (progress - 0.3) / 0.7;
-        const tailLen = 35 + progress * 25;
-        const norm = Math.hypot(ss.vx, ss.vy);
 
-        const grad = ctx.createLinearGradient(
-          ss.x, ss.y,
-          ss.x - (ss.vx / norm) * tailLen * 0.5,
-          ss.y - (ss.vy / norm) * tailLen * 0.5,
-        );
+        const progress = m.life / m.maxLife;
+        const fadeIn = Math.min(progress * 5, 1);
+        const fadeOut = progress > 0.7 ? 1 - (progress - 0.7) / 0.3 : 1;
+        const alpha = fadeIn * fadeOut * (0.4 + m.depth * 0.6);
+
+        const [cr, cg, cb] = m.useEnd ? colors.end : colors.start;
+        const norm = Math.hypot(m.vx, m.vy);
+        const dx = m.vx / norm;
+        const dy = -m.vy / norm;
+
+        const tailX = m.x - dx * m.tailLen;
+        const tailY = m.y + dy * m.tailLen;
+
+        const grad = ctx.createLinearGradient(m.x, m.y, tailX, tailY);
         grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
-        grad.addColorStop(1, `rgba(${ar},${ag},${ab},0)`);
+        grad.addColorStop(0.15, `rgba(${cr},${cg},${cb},${alpha * 0.7})`);
+        grad.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+
         ctx.strokeStyle = grad;
-        ctx.lineWidth = ss.size;
+        ctx.lineWidth = m.size;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(ss.x, ss.y);
-        ctx.lineTo(ss.x - (ss.vx / norm) * tailLen, ss.y - (ss.vy / norm) * tailLen);
+        ctx.moveTo(m.x, m.y);
+        ctx.lineTo(tailX, tailY);
         ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, m.size * 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${alpha * 0.6})`;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, m.size * 4 * m.depth, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha * 0.12})`;
+        ctx.fill();
+
+        if (Math.random() < 0.3) {
+          spawnParticle(
+            m.x - dx * m.tailLen * (0.2 + Math.random() * 0.5),
+            m.y + dy * m.tailLen * (0.2 + Math.random() * 0.5),
+            colors,
+          );
+        }
       }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= 0.97;
+        p.vy *= 0.97;
+        p.life++;
+        if (p.life > p.maxLife) { particles.splice(i, 1); continue; }
+        const a = 1 - p.life / p.maxLife;
+        ctx.globalAlpha = a * 0.5;
+        ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
 
       rafRef.current = requestAnimationFrame(draw);
     }
@@ -180,9 +180,8 @@ export default function Background() {
 
     return () => {
       cancelAnimationFrame(rafRef.current);
-      clearInterval(shootingTimer);
+      clearInterval(spawnTimer);
       window.removeEventListener('resize', resize);
-      window.removeEventListener('mousemove', onMouseMove);
     };
   }, []);
 

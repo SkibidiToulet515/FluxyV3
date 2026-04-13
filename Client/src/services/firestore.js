@@ -10,6 +10,55 @@ import { uploadGameFile, deleteGameFileByPath } from './storage';
 /** Newest page size for realtime listeners; older pages use the same batch size. */
 export const CHAT_PAGE_SIZE = 50;
 
+if (typeof window !== 'undefined') {
+  window.__diagnoseDMs = async () => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) { console.error('Not signed in'); return; }
+    console.group('[DM Diagnosis]');
+    console.log('Project:', db.app.options.projectId);
+    console.log('UID:', uid);
+
+    const friendsSnap = await getDocs(query(
+      collection(db, 'friends'),
+      where('users', 'array-contains', uid),
+      where('status', '==', 'accepted'),
+    ));
+    const friends = friendsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    console.log(`Friends: ${friends.length}`, friends.map((f) => f.id));
+
+    for (const f of friends) {
+      const other = f.users?.find((u) => u !== uid);
+      if (!other) continue;
+      const pair = [uid, other].sort();
+      const dmId = pair.join('_');
+      console.log(`--- Friend ${other} → DM path: directMessages/${dmId}`);
+
+      try {
+        await setDoc(doc(db, 'directMessages', dmId), {
+          participants: pair,
+          lastMessage: null,
+          lastMessageAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        });
+        console.log(`  CREATE ✓ (new doc or overwrite succeeded)`);
+      } catch (err) {
+        console.log(`  CREATE result: ${err.code} — ${err.message}`);
+      }
+    }
+
+    try {
+      const dmSnap = await getDocs(query(
+        collection(db, 'directMessages'),
+        where('participants', 'array-contains', uid),
+      ));
+      console.log(`DMs found: ${dmSnap.size}`, dmSnap.docs.map((d) => d.id));
+    } catch (err) {
+      console.error(`DM query failed: ${err.code} — ${err.message}`);
+    }
+    console.groupEnd();
+  };
+}
+
 export const DEFAULT_SERVER_ID = 'fluxy-community';
 const DEFAULT_SERVER_CHANNELS = [
   { id: 'general', name: 'General' },
@@ -59,6 +108,15 @@ export async function searchUsers(searchTerm, maxResults = 20) {
 
 export async function updateUserDoc(uid, fields) {
   await updateDoc(doc(db, 'users', uid), fields);
+}
+
+export async function updateUserSettings(uid, fields) {
+  await updateDoc(doc(db, 'users', uid), fields);
+}
+
+export async function getUserSettings(uid) {
+  const snap = await getDoc(doc(db, 'users', uid));
+  return snap.exists() ? snap.data() : {};
 }
 
 export function subscribeUser(uid, callback) {
@@ -123,11 +181,23 @@ export async function sendFriendRequest(_fromUid, toUid) {
   }
 }
 
+/**
+ * Accept a pending friend request and ensure the canonical DM thread exists for the pair.
+ * DM id is always sorted UIDs joined by "_" (see getDmChannelId).
+ */
 export async function acceptFriendRequest(docId) {
-  await updateDoc(doc(db, 'friends', docId), {
+  const ref = doc(db, 'friends', docId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error('Friend request not found');
+  const data = snap.data();
+  if (data.status !== 'pending') throw new Error('Request is no longer pending');
+  const users = data.users;
+  if (!Array.isArray(users) || users.length !== 2) throw new Error('Invalid friend record');
+  await updateDoc(ref, {
     status: 'accepted',
     acceptedAt: serverTimestamp(),
   });
+  await ensureDmChannel(users[0], users[1]);
 }
 
 export async function declineFriendRequest(docId) {
@@ -169,35 +239,93 @@ export function subscribeFriendRequests(uid, callback) {
 }
 
 // ─── Direct Messages ──────────────────────────────────────────────────────────
+//
+// Model: one document per pair at directMessages/{uidLo_uidHi}
+// - uidLo/uidHi are the two Firebase auth UIDs sorted lexicographically (must match Firestore rules).
+// - participants[] on the doc is the same two UIDs in that sorted order.
+// This prevents duplicate threads for the same pair under alternate document ids.
 
-export function getDmChannelId(uid1, uid2) {
-  return [uid1, uid2].sort().join('_');
+const DM_ID_SEP = '_';
+
+/** Sorted [uidLo, uidHi] — single source of truth for DM addressing (must match security rules). */
+export function orderedDmPair(uid1, uid2) {
+  return [uid1, uid2].slice().sort();
 }
 
+/** Canonical DM document id for a pair (no duplicate docs for the same two users). */
+export function getDmChannelId(uid1, uid2) {
+  return orderedDmPair(uid1, uid2).join(DM_ID_SEP);
+}
+
+/**
+ * Create the DM thread doc if missing; idempotent.
+ * Tries to create — if the doc already exists Firestore rules will deny the
+ * overwrite (which is fine, the doc is already there).
+ */
 export async function ensureDmChannel(uid1, uid2) {
-  const id = getDmChannelId(uid1, uid2);
+  if (!uid1 || !uid2 || uid1 === uid2) {
+    throw new Error('Invalid direct message participants');
+  }
+  const pair = orderedDmPair(uid1, uid2);
+  const id = pair.join(DM_ID_SEP);
   const ref = doc(db, 'directMessages', id);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) {
+
+  try {
     await setDoc(ref, {
-      participants: [uid1, uid2],
+      participants: pair,
       lastMessage: null,
       lastMessageAt: serverTimestamp(),
       createdAt: serverTimestamp(),
     });
+    console.log(`[Fluxy] ensureDmChannel: created DM ${id}`);
+  } catch (err) {
+    if (err.code === 'permission-denied') {
+      // Expected when doc already exists — the update rule rejects overwriting
+      // non-allowed fields, which means the doc is already in place.
+      console.log(`[Fluxy] ensureDmChannel: DM ${id} already exists`);
+    } else {
+      console.warn(`[Fluxy] ensureDmChannel error for ${id}:`, err.code, err.message);
+    }
   }
   return id;
+}
+
+/**
+ * Backfill: ensure every accepted friendship has a DM thread.
+ * Reads all accepted friends for `uid`, computes deterministic DM IDs, batch-checks which
+ * docs exist, and creates missing ones. Runs once on app load — idempotent and safe to
+ * call concurrently (setDoc with deterministic ID is a no-op if the doc already exists).
+ */
+export async function backfillFriendDms(uid, friends) {
+  if (!uid || !friends?.length) return;
+  let count = 0;
+  for (const f of friends) {
+    const other = f.users?.find((u) => u !== uid);
+    if (!other) continue;
+    await ensureDmChannel(uid, other);
+    count++;
+  }
+  console.log(`[Fluxy] backfillFriendDms: processed ${count} friend(s)`);
 }
 
 export function subscribeDmChannels(uid, callback) {
   const q = query(
     collection(db, 'directMessages'),
     where('participants', 'array-contains', uid),
-    orderBy('lastMessageAt', 'desc'),
   );
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-  }, snapshotErrorHandler('subscribeDmChannels'));
+    const channels = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const ta = a.lastMessageAt?.toMillis?.() ?? 0;
+        const tb = b.lastMessageAt?.toMillis?.() ?? 0;
+        return tb - ta;
+      });
+    console.log(`[Fluxy] subscribeDmChannels: ${channels.length} DM(s) for ${uid.slice(0, 8)}…`);
+    callback(channels);
+  }, (err) => {
+    console.error('[Fluxy] subscribeDmChannels ERROR:', err.code, err.message);
+  });
 }
 
 /**
@@ -206,6 +334,7 @@ export function subscribeDmChannels(uid, callback) {
  * meta.isFullPage: if true, older messages may exist before oldestLiveDoc.
  */
 export function subscribeDmMessages(channelId, callback, messageLimit = CHAT_PAGE_SIZE) {
+  console.log(`[Fluxy] subscribeDmMessages: listening on directMessages/${channelId}/messages`);
   const q = query(
     collection(db, 'directMessages', channelId, 'messages'),
     orderBy('createdAt', 'desc'),
@@ -215,11 +344,14 @@ export function subscribeDmMessages(channelId, callback, messageLimit = CHAT_PAG
     const docs = snap.docs;
     const msgs = docs.map((d) => ({ id: d.id, ...d.data() })).reverse();
     const oldestLiveDoc = docs.length ? docs[docs.length - 1] : null;
+    console.log(`[Fluxy] subscribeDmMessages: ${msgs.length} message(s) in ${channelId}`);
     callback(msgs, {
       oldestLiveDoc,
       isFullPage: docs.length === messageLimit,
     });
-  }, snapshotErrorHandler('subscribeDmMessages'));
+  }, (err) => {
+    console.error(`[Fluxy] subscribeDmMessages ERROR on ${channelId}:`, err.code, err.message);
+  });
 }
 
 /** Load older messages before `cursorDoc` (QueryDocumentSnapshot of current oldest loaded). */
@@ -240,6 +372,7 @@ export async function loadOlderDmMessages(channelId, cursorDoc, batchSize = CHAT
 }
 
 export async function sendDmMessage(channelId, msg) {
+  console.log(`[Fluxy] sendDmMessage: writing to directMessages/${channelId}/messages`);
   const messageData = {
     ...msg,
     senderUid: auth.currentUser.uid,
@@ -254,6 +387,7 @@ export async function sendDmMessage(channelId, msg) {
     lastMessageAt: serverTimestamp(),
     lastSenderUid: auth.currentUser.uid,
   });
+  console.log(`[Fluxy] sendDmMessage: saved message ${msgRef.id} in ${channelId}`);
   return msgRef.id;
 }
 
@@ -376,7 +510,8 @@ export function subscribeServers(uid, callback) {
     where('members', 'array-contains', uid),
   );
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    // Document id must win — spread data last could overwrite `id` if a bad field exists in the doc.
+    callback(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
   }, snapshotErrorHandler('subscribeServers'));
 }
 
@@ -474,52 +609,133 @@ export async function ensureDefaultServer(uid) {
 }
 
 // ─── Server Invites ───────────────────────────────────────────────────────────
+//
+// Model: serverInvites/{inviteCode} where inviteCode is an opaque id (not the server id).
+// - serverId: the only server this code can add members to (immutable after create).
+// - uses / maxUses / expiresAt: redemption limits (see useServerInvite transaction).
+// Join flow always loads servers/{invite.serverId} from the invite doc — no cross-server join.
 
-function generateInviteCode() {
+function generateInviteCode(length = 10) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
   let code = '';
-  for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < length; i++) code += chars[bytes[i] % chars.length];
   return code;
 }
 
+/** True if uid is the server document owner (Firestore `owner` field). */
+export function isServerOwner(server, uid) {
+  return Boolean(server && uid && server.owner === uid);
+}
+
+/**
+ * Creates `serverInvites/{code}` for one server. Re-reads the doc so the returned code and binding
+ * always match what Firestore stored (avoids UI showing a code that doesn’t match the document).
+ * @returns {{ code: string, boundServerId: string, boundServerName: string }}
+ */
 export async function createServerInvite(serverId, serverName, opts = {}) {
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error('Sign in required');
-  const code = generateInviteCode();
-  await setDoc(doc(db, 'serverInvites', code), {
-    serverId,
-    serverName: serverName || '',
-    createdBy: uid,
-    createdAt: serverTimestamp(),
-    expiresAt: opts.expiresAt || null,
-    maxUses: opts.maxUses ?? 0,
-    uses: 0,
-  });
-  return code;
+  const maxTries = 16;
+  for (let t = 0; t < maxTries; t++) {
+    const code = generateInviteCode(10);
+    const ref = doc(db, 'serverInvites', code);
+    const snap = await getDoc(ref);
+    if (snap.exists()) continue;
+    try {
+      await setDoc(ref, {
+        serverId,
+        serverName: serverName || '',
+        createdBy: uid,
+        createdAt: serverTimestamp(),
+        expiresAt: opts.expiresAt || null,
+        maxUses: opts.maxUses ?? 0,
+        uses: 0,
+      });
+      const verify = await getDoc(ref);
+      if (!verify.exists()) throw new Error('Invite was not saved');
+      const data = verify.data();
+      if (data.serverId !== serverId) {
+        throw new Error('Invite is bound to a different server than requested');
+      }
+      return {
+        code: verify.id,
+        boundServerId: data.serverId,
+        boundServerName: (data.serverName || serverName || '').trim(),
+      };
+    } catch (err) {
+      if (err?.code === 'permission-denied') {
+        throw new Error(
+          'No permission to create invites for this server. You must be a member; deploy latest firestore.rules if this persists.',
+        );
+      }
+      const msg = typeof err?.message === 'string' ? err.message : '';
+      if (msg.includes('Invite is bound') || msg.includes('Invite was not saved')) throw err;
+      continue;
+    }
+  }
+  throw new Error('Could not generate a unique invite code. Try again.');
+}
+
+export async function deleteServer(serverId) {
+  await deleteDoc(doc(db, 'servers', serverId));
+}
+
+/** Replace the full channels array (owner-only in rules). */
+export async function replaceServerChannels(serverId, channels) {
+  await updateDoc(doc(db, 'servers', serverId), { channels });
 }
 
 export async function getServerInvite(inviteCode) {
-  const snap = await getDoc(doc(db, 'serverInvites', inviteCode));
+  const code = (inviteCode || '').trim();
+  if (!code) return null;
+  const snap = await getDoc(doc(db, 'serverInvites', code));
   return snap.exists() ? { code: snap.id, ...snap.data() } : null;
 }
 
+/**
+ * Redeem an invite: atomically validates code → target server, adds member, increments uses.
+ * Invite always carries serverId; join only affects that server (no cross-server reuse).
+ */
 export async function useServerInvite(inviteCode, uid) {
-  const invite = await getServerInvite(inviteCode);
-  if (!invite) throw new Error('Invalid invite code');
-  if (invite.expiresAt) {
-    const expires = invite.expiresAt.toDate ? invite.expiresAt.toDate() : new Date(invite.expiresAt);
-    if (expires < new Date()) throw new Error('Invite has expired');
-  }
-  if (invite.maxUses > 0 && invite.uses >= invite.maxUses) throw new Error('Invite has reached max uses');
-  const serverRef = doc(db, 'servers', invite.serverId);
-  const serverSnap = await getDoc(serverRef);
-  if (!serverSnap.exists()) throw new Error('Server no longer exists');
-  if (serverSnap.data().members?.includes(uid)) throw new Error('Already a member');
-  await updateDoc(serverRef, { members: arrayUnion(uid) });
-  await updateDoc(doc(db, 'serverInvites', inviteCode), {
-    uses: increment(1),
+  const code = (inviteCode || '').trim();
+  if (!code) throw new Error('Enter an invite code');
+  const inviteRef = doc(db, 'serverInvites', code);
+
+  return runTransaction(db, async (transaction) => {
+    const inviteSnap = await transaction.get(inviteRef);
+    if (!inviteSnap.exists()) throw new Error('Invalid invite code');
+
+    const invite = inviteSnap.data();
+    const targetServerId = invite.serverId;
+    if (!targetServerId || typeof targetServerId !== 'string') {
+      throw new Error('This invite is missing a server and cannot be used');
+    }
+
+    if (invite.expiresAt) {
+      const expires = invite.expiresAt.toDate
+        ? invite.expiresAt.toDate()
+        : new Date(invite.expiresAt);
+      if (expires < new Date()) throw new Error('Invite has expired');
+    }
+
+    const uses = typeof invite.uses === 'number' ? invite.uses : 0;
+    const maxUses = typeof invite.maxUses === 'number' ? invite.maxUses : 0;
+    if (maxUses > 0 && uses >= maxUses) throw new Error('Invite has reached max uses');
+
+    const serverRef = doc(db, 'servers', targetServerId);
+    const serverSnap = await transaction.get(serverRef);
+    if (!serverSnap.exists()) throw new Error('Server no longer exists');
+
+    const members = serverSnap.data().members || [];
+    if (members.includes(uid)) throw new Error('Already a member');
+
+    transaction.update(serverRef, { members: arrayUnion(uid) });
+    transaction.update(inviteRef, { uses: increment(1) });
+
+    return targetServerId;
   });
-  return invite.serverId;
 }
 
 // ─── Message Actions ──────────────────────────────────────────────────────────
@@ -634,6 +850,7 @@ export async function createGameDoc(data, gameFile = null) {
   await setDoc(gameRef, {
     title: data.title,
     category: data.category || 'Uncategorized',
+    subject: data.subject || null,
     description: data.description || '',
     thumbnail: data.thumbnail || null,
     url,

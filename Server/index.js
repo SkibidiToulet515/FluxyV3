@@ -16,6 +16,8 @@ import adminRouter from './routes/admin.js';
 import moderationRouter from './routes/moderation.js';
 import rolesRouter from './routes/roles.js';
 import authResolveRouter from './routes/authResolve.js';
+import geminiRouter from './routes/gemini.js';
+import exportRouter from './routes/export.js';
 import { initFirebase, ensureDefaultRoleDefinitions } from './config/firebase.js';
 import { UGS_DIR } from './config/paths.js';
 import { ugsLfsGuard } from './middleware/ugsLfsGuard.js';
@@ -28,6 +30,7 @@ ensureDefaultRoleDefinitions().catch((err) =>
 const PORT = Number(process.env.PORT) || 3000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 const ALLOWED_ORIGINS = CLIENT_ORIGIN.split(',').map(s => s.trim());
+const MIRROR_DOMAINS = ['fluxyv3.online', 'fluxyv3.store', 'fluxyv3.space', 'fluxyv3.site'];
 
 const app = express();
 app.use(
@@ -38,7 +41,8 @@ app.use(
         ALLOWED_ORIGINS.some((o) => origin === o) ||
         origin.endsWith('.hosted.app') ||
         origin.endsWith('.web.app') ||
-        origin.endsWith('.firebaseapp.com')
+        origin.endsWith('.firebaseapp.com') ||
+        MIRROR_DOMAINS.some((d) => origin === `https://${d}` || origin === `http://${d}`)
       ) {
         cb(null, true);
       } else {
@@ -77,6 +81,8 @@ app.use('/api/giphy', giphyRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/moderation', moderationRouter);
 app.use('/api/roles', rolesRouter);
+app.use('/api/gemini', geminiRouter);
+app.use('/api', exportRouter);
 
 // --- Serve built frontend in production ---
 if (process.env.NODE_ENV === 'production') {
@@ -113,7 +119,8 @@ const io = new Server(httpServer, {
         ALLOWED_ORIGINS.some((o) => origin === o) ||
         origin.endsWith('.hosted.app') ||
         origin.endsWith('.web.app') ||
-        origin.endsWith('.firebaseapp.com')
+        origin.endsWith('.firebaseapp.com') ||
+        MIRROR_DOMAINS.some((d) => origin === `https://${d}` || origin === `http://${d}`)
       ) {
         cb(null, true);
       } else {

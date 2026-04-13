@@ -180,7 +180,7 @@ export default function Proxy() {
   if (!browsing) {
     return (
       <div className="proxy-page animate-fade-in">
-        <Header title="Web Tools" onMenuClick={onMenuToggle} />
+        <Header title="Proxy" onMenuClick={onMenuToggle} />
 
         <div className="proxy-landing">
           <div className="proxy-landing-card glass-card">

@@ -31,7 +31,11 @@ export default function JoinServerModal({ uid, onClose, onJoined }) {
           <button className="dc-modal-close" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="dc-modal-body">
-          <label className="dc-modal-label">Invite Code</label>
+          <p className="dc-modal-hint dc-join-server-hint">
+            Every invite is tied to a single server. Enter the code you received — you will join that
+            server only; codes never work across different servers.
+          </p>
+          <label className="dc-modal-label">Invite code</label>
           <input
             className="dc-modal-input"
             placeholder="Enter invite code…"

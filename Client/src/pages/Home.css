@@ -37,6 +37,13 @@
   color: var(--text-secondary);
 }
 
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .hero-stats {
   display: flex;
   gap: 2.5rem;
