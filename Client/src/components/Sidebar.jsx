@@ -16,7 +16,7 @@ const NAV_ITEMS = [
     match: isGamesSectionPath,
   },
   {
-    to: '/proxy',
+    to: '/history',
     icon: Globe,
     label: 'Proxy',
     match: isProxySectionPath,

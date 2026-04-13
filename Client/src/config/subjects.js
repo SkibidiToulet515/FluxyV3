@@ -1,5 +1,5 @@
 /**
- * Games catalog lives at /math. Nav labels: Games → /math (via /games redirect), Proxy → /proxy.
+ * Games catalog at /math. Nav: Games → /math, Proxy → /history (web proxy UI).
  * SUBJECT_KEYS kept for Firestore / admin game docs.
  */
 
@@ -21,5 +21,5 @@ export function isGamesSectionPath(pathname) {
 }
 
 export function isProxySectionPath(pathname) {
-  return pathname === '/proxy';
+  return pathname === '/history' || pathname === '/proxy';
 }

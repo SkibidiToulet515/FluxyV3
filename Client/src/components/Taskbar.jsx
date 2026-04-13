@@ -9,7 +9,7 @@ import './Taskbar.css';
 const NAV_ITEMS = [
   { to: '/', icon: Home, label: 'Home', match: (p) => p === '/' },
   { to: '/games', icon: Gamepad2, label: 'Games', match: isGamesSectionPath },
-  { to: '/proxy', icon: Globe, label: 'Proxy', match: isProxySectionPath },
+  { to: '/history', icon: Globe, label: 'Proxy', match: isProxySectionPath },
   { to: '/chat', icon: MessageCircle, label: 'Chat', match: (p) => p === '/chat' },
   { to: '/assistant', icon: Bot, label: 'AI', match: (p) => p === '/assistant' },
   { to: '/settings', icon: Settings, label: 'Settings', match: (p) => p === '/settings' },

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Filter } from 'lucide-react';
+import { Filter, Zap } from 'lucide-react';
 import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
 import GameCard from '../components/GameCard';
@@ -51,13 +51,34 @@ export default function SubjectPage() {
 
   return (
     <div className="subject-page subject-page--catalog animate-fade-in">
-      <Header title="Games" onMenuClick={onMenuToggle} />
-
-      <p className="subject-catalog-tagline glass-card">
-        <span className="subject-catalog-stat">{loading ? '…' : total.toLocaleString()} Games</span>
-        <span className="subject-catalog-sep" aria-hidden>·</span>
-        <span className="subject-catalog-stat">0 Delay and instant gameplay</span>
-      </p>
+      <section className="games-catalog-hero glass-card" aria-labelledby="games-catalog-heading">
+        <div className="games-catalog-hero__glow" aria-hidden />
+        <Header
+          title="Games"
+          titleId="games-catalog-heading"
+          eyebrow="Fluxy library"
+          onMenuClick={onMenuToggle}
+          className="page-header--games-hero"
+        />
+        <div className="games-catalog-metrics">
+          <div className="games-metric">
+            <span className="games-metric__value">
+              {loading ? '…' : total.toLocaleString()}
+            </span>
+            <span className="games-metric__label">Games</span>
+          </div>
+          <span className="games-metric-divider" aria-hidden />
+          <div className="games-metric games-metric--accent">
+            <span className="games-metric__value">0</span>
+            <span className="games-metric__label">Delay</span>
+          </div>
+          <span className="games-metric-divider" aria-hidden />
+          <div className="games-metric games-metric--wide">
+            <Zap size={14} className="games-metric__icon" aria-hidden />
+            <span className="games-metric__label games-metric__label--inline">Instant gameplay</span>
+          </div>
+        </div>
+      </section>
 
       <div className="subject-toolbar">
         <SearchBar value={search} onChange={setSearch} placeholder="Search games…" />

@@ -54,7 +54,8 @@ function AppShell() {
         >
           <Route path="/" element={<Home />} />
           <Route path="/games" element={<Navigate to="/math" replace />} />
-          <Route path="/proxy" element={<Proxy />} />
+          <Route path="/history" element={<Proxy />} />
+          <Route path="/proxy" element={<Navigate to="/history" replace />} />
           <Route path="/math" element={<SubjectPage />} />
           <Route path="/assistant" element={<GeminiPanel />} />
           <Route path="/settings" element={<Settings />} />

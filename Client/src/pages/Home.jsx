@@ -46,7 +46,7 @@ export default function Home() {
               <Gamepad2 size={18} />
               Games
             </button>
-            <button className="btn btn-secondary" onClick={() => navigate('/proxy')}>
+            <button className="btn btn-secondary" onClick={() => navigate('/history')}>
               <Globe size={18} />
               Proxy
             </button>
