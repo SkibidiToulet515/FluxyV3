@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="fluxyMarkGrad" x1="8" y1="6" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22d3ee"/>
+      <stop offset="0.5" stop-color="#818cf8"/>
+      <stop offset="1" stop-color="#d946ef"/>
+    </linearGradient>
+  </defs>
+  <path
+    fill="none"
+    stroke="url(#fluxyMarkGrad)"
+    stroke-width="3.6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M11 12c9-3 19-1 23 8 3 7-2 15-12 14-5 0-8 2-7 7 1 6 10 9 20 5"
+  />
+</svg>

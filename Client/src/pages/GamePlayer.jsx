@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, Maximize, Minimize, ExternalLink } from 'lucide-react';
 import { fetchGames } from '../utils/api';
+import { getMockGameById } from '../data/mockHomeGames.js';
 import { getGamePlaySrc } from '../utils/gamePlayUrl';
 import './GamePlayer.css';
 
@@ -15,8 +16,13 @@ export default function GamePlayer() {
 
   useEffect(() => {
     fetchGames()
-      .then((games) => setGame(games.find((g) => g.id === gameId) || null))
-      .catch(() => {})
+      .then((games) => {
+        const found = games.find((g) => g.id === gameId);
+        setGame(found || getMockGameById(gameId) || null);
+      })
+      .catch(() => {
+        setGame(getMockGameById(gameId) || null);
+      })
       .finally(() => setLoading(false));
   }, [gameId]);
 

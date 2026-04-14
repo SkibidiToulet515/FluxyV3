@@ -1,3 +1,5 @@
+import { ALL_MOCK_GAMES } from '../data/mockHomeGames.js';
+
 const API_BASE = (import.meta.env.VITE_API_URL || '') + '/api';
 
 async function parseJsonArray(res) {
@@ -10,13 +12,19 @@ async function parseJsonArray(res) {
 }
 
 export async function fetchGames() {
-  const res = await fetch(`${API_BASE}/games`);
-  if (!res.ok) {
-    const err = new Error(`Games API failed: ${res.status}`);
-    err.status = res.status;
-    throw err;
+  try {
+    const res = await fetch(`${API_BASE}/games`);
+    if (!res.ok) {
+      const err = new Error(`Games API failed: ${res.status}`);
+      err.status = res.status;
+      throw err;
+    }
+    const data = await parseJsonArray(res);
+    if (!data.length) return ALL_MOCK_GAMES;
+    return data;
+  } catch {
+    return ALL_MOCK_GAMES;
   }
-  return parseJsonArray(res);
 }
 
 export async function searchGames(query) {

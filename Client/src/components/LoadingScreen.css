@@ -51,15 +51,12 @@
   justify-content: center;
 }
 
-.loading-logo-letter {
-  font-size: 2rem;
-  font-weight: 800;
-  color: #fff;
+.loading-logo-mark {
+  width: 44px;
+  height: 44px;
   z-index: 2;
-  background: linear-gradient(135deg, var(--gradient-start, #6366f1), var(--gradient-end, #8b5cf6));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  position: relative;
+  display: block;
 }
 
 .loading-ring {
@@ -89,8 +86,15 @@
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: -0.03em;
-  color: var(--text-primary, #e4e4e7);
   animation: loadingTextPulse 1.5s ease-in-out infinite;
+}
+
+.loading-text-flux {
+  color: #7dd3fc;
+}
+
+.loading-text-y {
+  color: #e879f9;
 }
 
 @keyframes loadingTextPulse {

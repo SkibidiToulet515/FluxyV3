@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Neon Pong</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #0a0a1a;
+      color: #e2e8f0;
+      font-family: system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    h1 { font-size: 1rem; font-weight: 600; color: #22d3ee; margin: 0; }
+    canvas {
+      border: 2px solid #818cf8;
+      border-radius: 8px;
+      box-shadow: 0 0 24px rgba(129, 140, 248, 0.35);
+      max-width: 100%;
+    }
+    p { font-size: 12px; color: #64748b; margin: 0; }
+  </style>
+</head>
+<body>
+  <h1>Neon Pong</h1>
+  <canvas id="c" width="400" height="280"></canvas>
+  <p>Mouse / touch — move paddle</p>
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    let py = 120;
+    let bx = 200;
+    let by = 140;
+    let vx = 3.2;
+    let vy = 2.4;
+    let score = 0;
+    function paddleY(e) {
+      const r = canvas.getBoundingClientRect();
+      const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+      py = Math.max(10, Math.min(210, y - 30));
+    }
+    canvas.addEventListener('mousemove', paddleY);
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); paddleY(e); }, { passive: false });
+    function step() {
+      bx += vx;
+      by += vy;
+      if (by < 8 || by > 272) vy *= -1;
+      if (bx < 18 && by > py - 6 && by < py + 66) {
+        vx = Math.abs(vx) * 1.02;
+        vy += (by - (py + 30)) * 0.06;
+        bx = 18;
+        score += 1;
+      }
+      if (bx > 392) {
+        bx = 200;
+        by = 140;
+        vx = -Math.abs(vx) * 0.9 - 0.5;
+        vy = (Math.random() - 0.5) * 4;
+      }
+      if (bx < 0) {
+        bx = 200;
+        by = 140;
+        vx = 3.2;
+        vy = 2.4;
+        score = 0;
+      }
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, 400, 280);
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
+      ctx.setLineDash([8, 12]);
+      ctx.beginPath();
+      ctx.moveTo(200, 0);
+      ctx.lineTo(200, 280);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#22d3ee';
+      ctx.fillRect(8, py, 10, 60);
+      ctx.fillStyle = '#d946ef';
+      ctx.fillRect(bx - 4, by - 4, 8, 8);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px system-ui';
+      ctx.fillText('Rally ' + score, 168, 20);
+      requestAnimationFrame(step);
+    }
+    step();
+  </script>
+</body>
+</html>

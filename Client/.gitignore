@@ -2,3 +2,4 @@
 public/games/*.html
 public/games/*.htm
 !public/games/404.html
+!public/games/fluxy-mock-*.html

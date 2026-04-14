@@ -7,7 +7,7 @@
   "scripts": {
     "build": "npm ci --prefix Server",
     "start": "node Server/index.js",
-    "build:client": "npm run build --prefix Client",
-    "deploy:hosting": "npm run build:client && firebase deploy --only hosting"
+    "build:client": "node Client/scripts/run-build.mjs",
+    "deploy:hosting": "node Client/scripts/run-build.mjs && firebase deploy --only hosting"
   }
 }

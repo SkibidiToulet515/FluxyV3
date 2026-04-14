@@ -20,11 +20,20 @@ export default function LoadingScreen({ onDone }) {
       <div className="loading-glow" />
       <div className="loading-center">
         <div className="loading-logo">
-          <span className="loading-logo-letter">F</span>
+          <img
+            className="loading-logo-mark"
+            src="/brand/fluxy-mark.svg"
+            alt=""
+            width={44}
+            height={44}
+          />
           <div className="loading-ring" />
           <div className="loading-ring ring-2" />
         </div>
-        <div className="loading-text">Fluxy</div>
+        <div className="loading-text">
+          <span className="loading-text-flux">flux</span>
+          <span className="loading-text-y">y</span>
+        </div>
         <div className="loading-bar-track">
           <div className="loading-bar-fill" />
         </div>

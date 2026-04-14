@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import {
   Home, Gamepad2, Globe, MessageCircle, Settings,
   ChevronLeft, ChevronRight, LogOut, Circle, ShieldAlert, ShieldCheck,
@@ -44,10 +44,19 @@ export default function Sidebar({ collapsed, onToggle, account, onLogout }) {
       {!collapsed && <div className="sidebar-overlay" onClick={onToggle} />}
       <aside className={`sidebar glass-bg ${collapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
-          <div className="sidebar-logo">
-            <span className="logo-icon">F</span>
-            <span className="logo-text">Fluxy</span>
-          </div>
+          <Link to="/" className="sidebar-logo" title="Home">
+            <img
+              className="logo-mark"
+              src="/brand/fluxy-mark.svg"
+              alt=""
+              width={34}
+              height={34}
+            />
+            <span className="logo-text">
+              <span className="logo-text-flux">flux</span>
+              <span className="logo-text-y">y</span>
+            </span>
+          </Link>
           <button
             className="sidebar-collapse-btn"
             onClick={onToggle}

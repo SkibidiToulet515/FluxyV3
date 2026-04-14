@@ -36,28 +36,31 @@
   gap: 0.625rem;
   overflow: hidden;
   white-space: nowrap;
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
 }
 
-.logo-icon {
+.logo-mark {
   width: 34px;
   height: 34px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 1rem;
-  color: #fff;
   flex-shrink: 0;
+  display: block;
 }
 
 .logo-text {
   font-size: 1.0625rem;
   font-weight: 700;
-  color: var(--text-primary);
   letter-spacing: -0.03em;
   transition: opacity 0.25s ease, width 0.25s ease;
+}
+
+.logo-text-flux {
+  color: #7dd3fc;
+}
+
+.logo-text-y {
+  color: #e879f9;
 }
 
 .sidebar.collapsed .logo-text {

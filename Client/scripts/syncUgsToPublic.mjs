@@ -27,9 +27,14 @@ function readHeadIsLfsPointer(absPath) {
 
 const KEEP_FILES = new Set(['404.html', '.gitkeep']);
 
+/** Bundled demo HTML shipped in-repo; never delete during UGS sync. */
+function isBundledMockGame(name) {
+  return /^fluxy-mock-.*\.html$/i.test(name);
+}
+
 fs.mkdirSync(outDir, { recursive: true });
 for (const name of fs.readdirSync(outDir)) {
-  if (KEEP_FILES.has(name)) continue;
+  if (KEEP_FILES.has(name) || isBundledMockGame(name)) continue;
   fs.unlinkSync(path.join(outDir, name));
 }
 

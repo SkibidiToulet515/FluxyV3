@@ -5,6 +5,7 @@ import Header from '../components/Header';
 import GameCard from '../components/GameCard';
 import GlitchText from '../components/GlitchText';
 import { fetchGames, getRecentlyPlayed } from '../utils/api';
+import { padGameRow, MOCK_FEATURED, MOCK_TRENDING } from '../data/mockHomeGames.js';
 import { useInteractiveCardFx } from '../hooks/useInteractiveCardFx';
 import { useMagneticButton } from '../hooks/useMagneticButton';
 import { useRevealStagger } from '../hooks/useRevealStagger';
@@ -33,11 +34,12 @@ export default function Home() {
 
   const recentlyPlayed = getRecentlyPlayed();
 
-  const featured = games.slice(0, 6);
-
-  const trending = games
-    .filter((_, i) => i % 7 === 0)
-    .slice(0, 8);
+  const featured = padGameRow(games.slice(0, 6), MOCK_FEATURED, 6);
+  const trending = padGameRow(
+    games.filter((_, i) => i % 7 === 0).slice(0, 8),
+    MOCK_TRENDING,
+    8,
+  );
 
   const categoryGames = {};
   games.forEach((g) => {
@@ -155,7 +157,13 @@ export default function Home() {
             <h3>Trending</h3>
           </div>
         </div>
-        {!loading && (
+        {loading ? (
+          <div className="loading-grid">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="skeleton-card glass-card" />
+            ))}
+          </div>
+        ) : (
           <div
             ref={trendingReveal.ref}
             className={`game-grid reveal-group${trendingReveal.visible ? ' reveal-group--visible' : ''}`}

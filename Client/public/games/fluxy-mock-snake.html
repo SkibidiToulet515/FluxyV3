@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Neon Snake</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #0a0a1a;
+      color: #e2e8f0;
+      font-family: system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    h1 { font-size: 1rem; font-weight: 600; color: #22d3ee; margin: 0; }
+    canvas {
+      border: 2px solid #22d3ee;
+      border-radius: 8px;
+      box-shadow: 0 0 24px rgba(34, 211, 238, 0.25);
+      max-width: 100%;
+      height: auto;
+    }
+    p { font-size: 12px; color: #64748b; margin: 0; }
+  </style>
+</head>
+<body>
+  <h1>Neon Snake</h1>
+  <canvas id="c" width="360" height="360"></canvas>
+  <p>Arrows or WASD</p>
+  <script>
+    const c = document.getElementById('c');
+    const x = c.getContext('2d');
+    const S = 18;
+    const G = 360 / S;
+    let snake = [[8, 8]];
+    let dir = [1, 0];
+    let food = [12, 12];
+    let tick = 0;
+    function pickFood() {
+      let p;
+      do {
+        p = [(Math.random() * G) | 0, (Math.random() * G) | 0];
+      } while (snake.some(([a, b]) => a === p[0] && b === p[1]));
+      food = p;
+    }
+    function loop() {
+      requestAnimationFrame(loop);
+      if (++tick % 7 !== 0) return;
+      const h = snake[0];
+      const n = [(h[0] + dir[0] + G) % G, (h[1] + dir[1] + G) % G];
+      if (snake.some(([a, b]) => a === n[0] && b === n[1])) {
+        snake = [[8, 8]];
+        pickFood();
+      }
+      snake.unshift(n);
+      if (n[0] === food[0] && n[1] === food[1]) pickFood();
+      else snake.pop();
+      x.fillStyle = '#0f172a';
+      x.fillRect(0, 0, 360, 360);
+      x.fillStyle = '#22d3ee';
+      x.shadowColor = '#c026d3';
+      x.shadowBlur = 6;
+      snake.forEach(([a, b]) => x.fillRect(a * S + 1, b * S + 1, S - 2, S - 2));
+      x.shadowBlur = 0;
+      x.fillStyle = '#d946ef';
+      x.fillRect(food[0] * S + 1, food[1] * S + 1, S - 2, S - 2);
+    }
+    pickFood();
+    document.addEventListener('keydown', (e) => {
+      const k = e.key;
+      if (k === 'ArrowUp' || k === 'w' || k === 'W') dir = [0, -1];
+      if (k === 'ArrowDown' || k === 's' || k === 'S') dir = [0, 1];
+      if (k === 'ArrowLeft' || k === 'a' || k === 'A') dir = [-1, 0];
+      if (k === 'ArrowRight' || k === 'd' || k === 'D') dir = [1, 0];
+    });
+    loop();
+  </script>
+</body>
+</html>

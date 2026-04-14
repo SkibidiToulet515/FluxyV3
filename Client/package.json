@@ -4,9 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "prebuild": "node scripts/syncUgsToPublic.mjs",
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/run-build.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },

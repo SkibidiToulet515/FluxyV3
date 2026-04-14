@@ -62,8 +62,17 @@ export default function Login() {
     <div className="login-page">
       <div className="login-card glass-card animate-slide-up">
         <div className="login-logo">
-          <span className="login-logo-icon">F</span>
-          <span className="login-logo-text">Fluxy</span>
+          <img
+            className="login-logo-mark"
+            src="/brand/fluxy-mark.svg"
+            alt=""
+            width={38}
+            height={38}
+          />
+          <span className="login-logo-text">
+            <span className="login-logo-flux">flux</span>
+            <span className="login-logo-y">y</span>
+          </span>
         </div>
 
         <h2>{mode === 'login' ? 'Welcome back' : 'Create account'}</h2>
