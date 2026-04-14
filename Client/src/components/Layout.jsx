@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useSearchParams } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Taskbar from './Taskbar';
 import { useAuth } from '../utils/AuthContext';
@@ -7,6 +7,8 @@ import { getLayoutMode } from '../utils/api';
 import './Layout.css';
 
 export default function Layout() {
+  const [params] = useSearchParams();
+  const windowMode = params.get('mode') === 'window';
   const [layoutMode, setLayoutMode] = useState(getLayoutMode);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { account, logout } = useAuth();
@@ -18,6 +20,10 @@ export default function Layout() {
   }, []);
 
   const isSidebar = layoutMode === 'sidebar';
+
+  if (windowMode) {
+    return <Outlet context={{ onMenuToggle: () => {} }} />;
+  }
 
   return (
     <div className={`layout ${isSidebar ? 'layout-sidebar' : 'layout-taskbar'}`}>

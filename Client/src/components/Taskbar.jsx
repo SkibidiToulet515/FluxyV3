@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  Home, Gamepad2, Globe, MessageCircle, Settings, Bot, ShieldAlert, ShieldCheck,
+  Home, Gamepad2, Globe, MessageCircle, Settings, ShieldAlert, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../utils/AuthContext';
 import { isGamesSectionPath, isProxySectionPath } from '../config/subjects';
@@ -11,7 +11,6 @@ const NAV_ITEMS = [
   { to: '/games', icon: Gamepad2, label: 'Games', match: isGamesSectionPath },
   { to: '/history', icon: Globe, label: 'Proxy', match: isProxySectionPath },
   { to: '/chat', icon: MessageCircle, label: 'Chat', match: (p) => p === '/chat' },
-  { to: '/assistant', icon: Bot, label: 'AI', match: (p) => p === '/assistant' },
   { to: '/settings', icon: Settings, label: 'Settings', match: (p) => p === '/settings' },
 ];
 

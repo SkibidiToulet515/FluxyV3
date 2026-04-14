@@ -16,7 +16,6 @@ import adminRouter from './routes/admin.js';
 import moderationRouter from './routes/moderation.js';
 import rolesRouter from './routes/roles.js';
 import authResolveRouter from './routes/authResolve.js';
-import geminiRouter from './routes/gemini.js';
 import exportRouter from './routes/export.js';
 import { initFirebase, ensureDefaultRoleDefinitions } from './config/firebase.js';
 import { UGS_DIR } from './config/paths.js';
@@ -81,7 +80,6 @@ app.use('/api/giphy', giphyRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/moderation', moderationRouter);
 app.use('/api/roles', rolesRouter);
-app.use('/api/gemini', geminiRouter);
 app.use('/api', exportRouter);
 
 // --- Serve built frontend in production ---

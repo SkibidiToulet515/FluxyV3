@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  Home, Gamepad2, Globe, MessageCircle, Settings, Bot,
+  Home, Gamepad2, Globe, MessageCircle, Settings,
   ChevronLeft, ChevronRight, LogOut, Circle, ShieldAlert, ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../utils/AuthContext';
@@ -22,7 +22,6 @@ const NAV_ITEMS = [
     match: isProxySectionPath,
   },
   { to: '/chat', icon: MessageCircle, label: 'Chat', match: (p) => p === '/chat' },
-  { to: '/assistant', icon: Bot, label: 'Assistant', match: (p) => p === '/assistant' },
   { to: '/settings', icon: Settings, label: 'Settings', match: (p) => p === '/settings' },
 ];
 

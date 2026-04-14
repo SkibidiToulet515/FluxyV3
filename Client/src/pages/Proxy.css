@@ -3,6 +3,14 @@
   margin: 0 auto;
 }
 
+.proxy-standalone-launch {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0.35rem 1rem 0.55rem;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.06));
+}
+
 .proxy-page.proxy-active {
   max-width: 100%;
   height: calc(100vh - 3rem);

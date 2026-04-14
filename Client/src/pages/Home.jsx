@@ -3,7 +3,11 @@ import { useOutletContext, useNavigate } from 'react-router-dom';
 import { TrendingUp, Clock, Star, ArrowRight, Gamepad2, Globe } from 'lucide-react';
 import Header from '../components/Header';
 import GameCard from '../components/GameCard';
+import GlitchText from '../components/GlitchText';
 import { fetchGames, getRecentlyPlayed } from '../utils/api';
+import { useInteractiveCardFx } from '../hooks/useInteractiveCardFx';
+import { useMagneticButton } from '../hooks/useMagneticButton';
+import { useRevealStagger } from '../hooks/useRevealStagger';
 import './Home.css';
 
 export default function Home() {
@@ -11,6 +15,14 @@ export default function Home() {
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const heroFx = useInteractiveCardFx();
+  const gamesMagRef = useMagneticButton();
+  const proxyMagRef = useMagneticButton();
+
+  const recentReveal = useRevealStagger();
+  const featuredReveal = useRevealStagger();
+  const trendingReveal = useRevealStagger();
 
   useEffect(() => {
     fetchGames()
@@ -37,16 +49,33 @@ export default function Home() {
     <div className="home animate-fade-in">
       <Header title="Home" onMenuClick={onMenuToggle} />
 
-      <section className="hero-banner glass-card">
+      <section
+        className="hero-banner glass-card fluxy-premium-surface"
+        ref={heroFx.ref}
+        onMouseMove={heroFx.onMouseMove}
+        onMouseLeave={heroFx.onMouseLeave}
+      >
         <div className="hero-content">
-          <h2>Welcome to Fluxy</h2>
+          <GlitchText as="h2" auto className="home-hero-glitch">
+            Welcome to Fluxy
+          </GlitchText>
           <p>Your premium learning hub with interactive content across every subject.</p>
           <div className="hero-actions">
-            <button className="btn btn-primary" onClick={() => navigate('/math')}>
+            <button
+              ref={gamesMagRef}
+              type="button"
+              className="btn btn-primary"
+              onClick={() => navigate('/math')}
+            >
               <Gamepad2 size={18} />
               Games
             </button>
-            <button className="btn btn-secondary" onClick={() => navigate('/history')}>
+            <button
+              ref={proxyMagRef}
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => navigate('/history')}
+            >
               <Globe size={18} />
               Proxy
             </button>
@@ -76,9 +105,14 @@ export default function Home() {
               <h3>Recently Played</h3>
             </div>
           </div>
-          <div className="game-grid">
-            {recentlyPlayed.slice(0, 6).map((game) => (
-              <GameCard key={game.id} game={game} />
+          <div
+            ref={recentReveal.ref}
+            className={`game-grid reveal-group${recentReveal.visible ? ' reveal-group--visible' : ''}`}
+          >
+            {recentlyPlayed.slice(0, 6).map((game, i) => (
+              <div key={game.id} className="reveal-item" style={{ '--stagger': i }}>
+                <GameCard game={game} />
+              </div>
             ))}
           </div>
         </section>
@@ -90,7 +124,7 @@ export default function Home() {
             <Star size={20} />
             <h3>Featured</h3>
           </div>
-          <button className="btn btn-ghost" onClick={() => navigate('/math')}>
+          <button type="button" className="btn btn-ghost" onClick={() => navigate('/math')}>
             View All <ArrowRight size={16} />
           </button>
         </div>
@@ -101,9 +135,14 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <div className="game-grid">
-            {featured.map((game) => (
-              <GameCard key={game.id} game={game} />
+          <div
+            ref={featuredReveal.ref}
+            className={`game-grid reveal-group${featuredReveal.visible ? ' reveal-group--visible' : ''}`}
+          >
+            {featured.map((game, i) => (
+              <div key={game.id} className="reveal-item" style={{ '--stagger': i }}>
+                <GameCard game={game} />
+              </div>
             ))}
           </div>
         )}
@@ -117,9 +156,14 @@ export default function Home() {
           </div>
         </div>
         {!loading && (
-          <div className="game-grid">
-            {trending.map((game) => (
-              <GameCard key={game.id} game={game} />
+          <div
+            ref={trendingReveal.ref}
+            className={`game-grid reveal-group${trendingReveal.visible ? ' reveal-group--visible' : ''}`}
+          >
+            {trending.map((game, i) => (
+              <div key={game.id} className="reveal-item" style={{ '--stagger': i }}>
+                <GameCard game={game} />
+              </div>
             ))}
           </div>
         )}

@@ -1,0 +1,133 @@
+import { useEffect, useRef } from 'react';
+import './NeuralParticles.css';
+
+const DOT_COUNT = 80;
+const LINK_DIST = 120;
+const LINK_DIST_SQ = LINK_DIST * LINK_DIST;
+
+export default function NeuralParticles() {
+  const canvasRef = useRef(null);
+  const rafRef = useRef(0);
+  const dotsRef = useRef([]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let w = 0;
+    let h = 0;
+
+    function resize() {
+      const ow = w;
+      const oh = h;
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+      const dots = dotsRef.current;
+      if (dots.length !== DOT_COUNT) {
+        dotsRef.current = Array.from({ length: DOT_COUNT }, () => ({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: (Math.random() - 0.5) * (reduced ? 0 : 0.35),
+          vy: (Math.random() - 0.5) * (reduced ? 0 : 0.35),
+        }));
+      } else if (ow > 0 && oh > 0) {
+        for (const d of dots) {
+          d.x = (d.x / ow) * w;
+          d.y = (d.y / oh) * h;
+        }
+      }
+    }
+
+    function themeRgb() {
+      const fallback = [99, 102, 241];
+      const s = getComputedStyle(document.documentElement);
+      let hex = (s.getPropertyValue('--accent') || '#6366f1').trim();
+      if (!hex.startsWith('#')) return fallback;
+      hex = hex.slice(1);
+      if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
+      const n = parseInt(hex, 16);
+      if (!Number.isFinite(n)) return fallback;
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+
+    if (reduced) {
+      const dots = dotsRef.current;
+      const [r, g, b] = themeRgb();
+      ctx.clearRect(0, 0, w, h);
+      for (let i = 0; i < dots.length; i++) {
+        for (let j = i + 1; j < dots.length; j++) {
+          const dx = dots[i].x - dots[j].x;
+          const dy = dots[i].y - dots[j].y;
+          if (dx * dx + dy * dy < LINK_DIST_SQ) {
+            ctx.strokeStyle = `rgba(${r},${g},${b},0.12)`;
+            ctx.lineWidth = 0.6;
+            ctx.beginPath();
+            ctx.moveTo(dots[i].x, dots[i].y);
+            ctx.lineTo(dots[j].x, dots[j].y);
+            ctx.stroke();
+          }
+        }
+        ctx.fillStyle = `rgba(${r},${g},${b},0.35)`;
+        ctx.beginPath();
+        ctx.arc(dots[i].x, dots[i].y, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      return () => window.removeEventListener('resize', resize);
+    }
+
+    function tick() {
+      const dots = dotsRef.current;
+      const [r, g, b] = themeRgb();
+
+      for (const d of dots) {
+        d.x += d.vx;
+        d.y += d.vy;
+        if (d.x < 0 || d.x > w) d.vx *= -1;
+        if (d.y < 0 || d.y > h) d.vy *= -1;
+        d.x = Math.max(0, Math.min(w, d.x));
+        d.y = Math.max(0, Math.min(h, d.y));
+      }
+
+      ctx.clearRect(0, 0, w, h);
+
+      for (let i = 0; i < dots.length; i++) {
+        for (let j = i + 1; j < dots.length; j++) {
+          const dx = dots[i].x - dots[j].x;
+          const dy = dots[i].y - dots[j].y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < LINK_DIST_SQ) {
+            const a = (1 - d2 / LINK_DIST_SQ) * 0.22;
+            ctx.strokeStyle = `rgba(${r},${g},${b},${a})`;
+            ctx.lineWidth = 0.7;
+            ctx.beginPath();
+            ctx.moveTo(dots[i].x, dots[i].y);
+            ctx.lineTo(dots[j].x, dots[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      for (const d of dots) {
+        ctx.fillStyle = `rgba(${r},${g},${b},0.45)`;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, 1.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    }
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="neural-particles-canvas" aria-hidden />;
+}

@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '../utils/AuthContext';
+import OpenInWindowButton from '../components/OpenInWindowButton';
+import { useWindowMode } from '../hooks/useWindowMode';
+import { useStandalonePageTitle } from '../hooks/useStandalonePageTitle';
+import { CHAT_STANDALONE_PATH } from '../standalone/paths';
 import { LogOut, Circle, Settings } from 'lucide-react';
 import ServerSidebar from '../components/chat/ServerSidebar';
 import ChatSidebar from '../components/chat/ChatSidebar';
@@ -41,6 +45,7 @@ function mergeMessageLists(older, live) {
 }
 
 export default function Chat() {
+  const isWindow = useWindowMode();
   const { account, logout } = useAuth();
   const uid = account?.uid;
   const username = account?.username || 'Anonymous';
@@ -262,6 +267,8 @@ export default function Chat() {
     return 'Friends';
   }, [view, activeDmId, activeGroupId, activeServerId, activeChannelId, dmChannels, groupChats, uid, userCache]);
 
+  useStandalonePageTitle(isWindow ? `Chat · ${chatTitle}` : undefined, isWindow);
+
   const activeServer = servers.find((s) => s.id === activeServerId);
   const statusColor = STATUS_COLORS[account?.status || 'online'];
   const incomingRequests = friendRequests.filter((r) => r.to === uid);
@@ -272,6 +279,11 @@ export default function Chat() {
 
   return (
     <div className="dc-layout">
+      {!isWindow && (
+        <div className="chat-open-window-wrap glass-bg">
+          <OpenInWindowButton path={CHAT_STANDALONE_PATH} label="Open chat in separate window" />
+        </div>
+      )}
       <ServerSidebar
         servers={servers}
         activeServerId={activeServerId}

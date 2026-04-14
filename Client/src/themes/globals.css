@@ -230,29 +230,7 @@ a:focus-visible {
   border-radius: 2px;
 }
 
-/* --- Scrollbars --- */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
-}
-
-*::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
+/* --- Scrollbars: gradient styles in premium-effects.css --- */
 
 /* --- Glassmorphism --- */
 .glass-bg {

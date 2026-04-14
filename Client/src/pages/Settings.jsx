@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { useOutletContext, useNavigate } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import {
   Palette, Layout, User, Circle, Check, Zap, Shield, Wifi, Camera, Loader2,
   ShieldCheck, Flag, Paintbrush, Image, Sparkles, MousePointer, Download,
-  Upload, Bot, Trash2, ToggleLeft, ToggleRight, Eye,
+  Upload, Trash2, ToggleLeft, ToggleRight, Eye,
 } from 'lucide-react';
 import { useTheme } from '../themes/ThemeContext';
 import { useAuth } from '../utils/AuthContext';
@@ -32,7 +32,6 @@ const PROVIDER_ICONS = { Zap, Shield };
 
 export default function Settings() {
   const { onMenuToggle } = useOutletContext();
-  const navigate = useNavigate();
   const { currentTheme, setCurrentTheme, themes, saveCustomTheme } = useTheme();
   const { account, setStatus } = useAuth();
   const [layout, setLayout] = useState(getLayoutMode);
@@ -258,19 +257,6 @@ export default function Settings() {
       {/* --- Data --- */}
       {account && <DataSection />}
 
-      {/* --- Assistant Link --- */}
-      <section className="settings-section glass-card">
-        <div className="settings-section-header">
-          <Bot size={20} />
-          <div>
-            <h3>AI Assistant</h3>
-            <p>Chat with Fluxy AI powered by Gemini</p>
-          </div>
-        </div>
-        <button className="btn btn-primary" onClick={() => navigate('/assistant')}>
-          Open Assistant
-        </button>
-      </section>
     </div>
   );
 }

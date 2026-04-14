@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import { addRecentlyPlayed } from '../utils/api';
+import OpenInWindowButton from './OpenInWindowButton';
+import { gameStandalonePath } from '../standalone/paths';
 import './GameCard.css';
 
 const CATEGORY_COLORS = {
@@ -26,22 +28,54 @@ export default function GameCard({ game }) {
 
   function handlePlay() {
     addRecentlyPlayed(game);
-    navigate(`/play/${game.id}`);
+    navigate(`/games/${game.id}`);
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handlePlay();
+    }
   }
 
   return (
-    <div className="game-card glass-card" onClick={handlePlay}>
-      <div className="game-card-thumb" style={{ '--card-accent': color }}>
-        <span className="game-card-initials">{initials}</span>
-        <div className="game-card-play-overlay">
-          <Play size={28} />
+    <div
+      className="game-card glass-card game-card--flip3d"
+      role="button"
+      tabIndex={0}
+      onClick={handlePlay}
+      onKeyDown={handleKeyDown}
+      aria-label={`Play ${game.name}`}
+    >
+      <div className="game-card-flip-inner">
+        <div className="game-card-face game-card-face--front">
+          <div className="game-card-thumb" style={{ '--card-accent': color }}>
+            <OpenInWindowButton
+              path={gameStandalonePath(game.id)}
+              className="game-card-open-window"
+              iconOnly
+              label="Open game in separate window"
+            />
+            <span className="game-card-initials">{initials}</span>
+            <div className="game-card-play-overlay">
+              <Play size={28} />
+            </div>
+          </div>
+          <div className="game-card-info">
+            <h4 className="game-card-title">{game.name}</h4>
+            <span className="game-card-category" style={{ color }}>
+              {game.category}
+            </span>
+          </div>
         </div>
-      </div>
-      <div className="game-card-info">
-        <h4 className="game-card-title">{game.name}</h4>
-        <span className="game-card-category" style={{ color }}>
-          {game.category}
-        </span>
+        <div
+          className="game-card-face game-card-face--back"
+          style={{ '--card-accent': color }}
+        >
+          <Play size={40} strokeWidth={1.75} />
+          <span className="game-card-back-label">Play Now</span>
+          <span className="game-card-back-sub">{game.name}</span>
+        </div>
       </div>
     </div>
   );

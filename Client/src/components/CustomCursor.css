@@ -3,14 +3,36 @@ html.custom-cursor-active * {
   cursor: none !important;
 }
 
+.cc-glow,
 .cc-dot,
 .cc-ring {
   position: fixed;
   top: 0;
   left: 0;
   pointer-events: none;
-  z-index: 99999;
   will-change: transform, opacity;
+}
+
+.cc-glow {
+  z-index: 99997;
+  width: 500px;
+  height: 500px;
+  margin-left: -250px;
+  margin-top: -250px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle closest-side,
+    color-mix(in srgb, var(--accent, #6366f1) 28%, transparent) 0%,
+    color-mix(in srgb, var(--gradient-end, #8b5cf6) 12%, transparent) 35%,
+    transparent 72%
+  );
+  opacity: 0.55;
+  filter: blur(0.5px);
+}
+
+.cc-dot,
+.cc-ring {
+  z-index: 99999;
 }
 
 .cc-dot {
@@ -20,7 +42,10 @@ html.custom-cursor-active * {
   margin-top: -3px;
   border-radius: 50%;
   background: var(--accent, #6366f1);
-  box-shadow: 0 0 6px var(--accent, #6366f1);
+  box-shadow:
+    0 0 8px var(--accent, #6366f1),
+    0 0 16px color-mix(in srgb, #22d3ee 40%, transparent);
+  transition: box-shadow 0.2s ease;
 }
 
 .cc-ring {
@@ -30,26 +55,33 @@ html.custom-cursor-active * {
   margin-top: -16px;
   border-radius: 50%;
   border: 1.5px solid var(--accent, #6366f1);
-  opacity: 0.5;
-  transition: width 0.2s ease, height 0.2s ease, margin 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+  box-shadow:
+    0 0 12px color-mix(in srgb, var(--accent, #6366f1) 55%, transparent),
+    0 0 28px color-mix(in srgb, var(--gradient-end, #8b5cf6) 25%, transparent);
+  opacity: 0.55;
+  transition: border-color 0.2s ease, opacity 0.2s ease, box-shadow 0.25s ease;
 }
 
 .cc-ring-hover {
-  width: 48px;
-  height: 48px;
-  margin-left: -24px;
-  margin-top: -24px;
   border-color: var(--accent-hover, #818cf8);
-  opacity: 0.3;
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--accent-hover, #818cf8) 65%, transparent),
+    0 0 36px color-mix(in srgb, #22d3ee 35%, transparent);
+  opacity: 0.42;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .cc-ring {
     transition: none;
   }
+
+  .cc-glow {
+    display: none;
+  }
 }
 
 @media (pointer: coarse) {
+  .cc-glow,
   .cc-dot,
   .cc-ring {
     display: none;

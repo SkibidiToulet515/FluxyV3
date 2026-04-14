@@ -1,0 +1,304 @@
+/* =============================================================================
+   Premium UI effects (particles/cursor in components; rest global)
+   ============================================================================= */
+
+/* --- Gradient scrollbar (purple → cyan) --- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #a855f7 rgba(34, 211, 238, 0.15);
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(180deg, #a855f7 0%, #6366f1 40%, #22d3ee 100%);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #c084fc 0%, #818cf8 45%, #67e8f9 100%);
+  background-clip: padding-box;
+}
+
+/* --- Shimmer buttons --- */
+.btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  left: -100%;
+  width: 60%;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.18) 45%,
+    rgba(255, 255, 255, 0.32) 50%,
+    rgba(255, 255, 255, 0.18) 55%,
+    transparent 100%
+  );
+  transform: skewX(-18deg);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.btn:hover:not(:disabled)::before {
+  opacity: 1;
+  animation: fluxy-btn-shimmer 0.75s ease forwards;
+}
+
+@keyframes fluxy-btn-shimmer {
+  from {
+    left: -100%;
+  }
+  to {
+    left: 130%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn::before {
+    display: none;
+  }
+}
+
+/* --- Shimmer text (animated gradient) --- */
+.fluxy-text-shimmer {
+  background: linear-gradient(
+    110deg,
+    var(--gradient-start, #6366f1) 0%,
+    var(--gradient-end, #8b5cf6) 25%,
+    #22d3ee 45%,
+    #c084fc 65%,
+    var(--gradient-start, #6366f1) 85%
+  );
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: fluxy-text-shimmer-move 7s ease-in-out infinite;
+}
+
+@keyframes fluxy-text-shimmer-move {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fluxy-text-shimmer {
+    animation: none;
+    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    background-size: 100% 100%;
+  }
+}
+
+/* --- Staggered scroll reveals --- */
+.reveal-group .reveal-item {
+  opacity: 0;
+  transform: translateY(22px);
+}
+
+.reveal-group--visible .reveal-item {
+  animation: fluxy-reveal-up 0.62s cubic-bezier(0.22, 1, 0.32, 1) forwards;
+  animation-delay: calc(var(--stagger, 0) * 52ms);
+}
+
+@keyframes fluxy-reveal-up {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-group .reveal-item {
+    opacity: 1;
+    transform: none;
+    animation: none !important;
+  }
+}
+
+/* --- Shared: rainbow border ring + spotlight + tilt --- */
+.fluxy-premium-surface {
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --spot-x: 50%;
+  --spot-y: 50%;
+  position: relative;
+  isolation: isolate;
+  transform-style: preserve-3d;
+  transition:
+    transform 0.2s cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 0.3s ease,
+    border-color 0.25s ease;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fluxy-premium-surface {
+    transform: perspective(860px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateZ(0);
+  }
+
+  .fluxy-premium-surface:hover {
+    transform: perspective(860px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateY(-4px) translateZ(0);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+
+  .fluxy-premium-surface:active {
+    transform: perspective(860px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) scale(0.988) translateZ(0);
+  }
+}
+
+.fluxy-premium-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  padding: 2px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: conic-gradient(
+    from 0deg,
+    #a855f7,
+    #22d3ee,
+    #4ade80,
+    #fbbf24,
+    #f472b6,
+    #818cf8,
+    #c084fc,
+    #a855f7
+  );
+  animation: fluxy-rainbow-border 5s linear infinite;
+  animation-play-state: paused;
+  pointer-events: none;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+.fluxy-premium-surface:hover::before {
+  opacity: 1;
+  animation-play-state: running;
+}
+
+@keyframes fluxy-rainbow-border {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.fluxy-premium-surface::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  background: radial-gradient(
+    520px circle at var(--spot-x) var(--spot-y),
+    rgba(255, 255, 255, 0.22),
+    rgba(255, 255, 255, 0.05) 42%,
+    transparent 58%
+  );
+}
+
+.fluxy-premium-surface:hover::after {
+  opacity: 1;
+}
+
+.fluxy-premium-surface .game-card-thumb,
+.fluxy-premium-surface .game-card-info,
+.fluxy-premium-surface .hero-content,
+.fluxy-premium-surface .hero-stats {
+  position: relative;
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fluxy-premium-surface {
+    transform: none;
+  }
+
+  .fluxy-premium-surface:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.32);
+  }
+
+  .fluxy-premium-surface::before {
+    animation: none;
+    opacity: 0;
+  }
+
+  .fluxy-premium-surface:hover::before {
+    opacity: 0;
+  }
+}
+
+/* Liquid Glass theme also defines .glass-card::before — override when premium surface is active */
+[data-theme='glassy'] .glass-card.fluxy-premium-surface::before {
+  background: conic-gradient(
+    from 0deg,
+    #a855f7,
+    #22d3ee,
+    #4ade80,
+    #fbbf24,
+    #f472b6,
+    #818cf8,
+    #c084fc,
+    #a855f7
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  inset: 0;
+  padding: 2px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  animation: fluxy-rainbow-border 5s linear infinite;
+  animation-play-state: paused;
+}
+
+[data-theme='glassy'] .glass-card.fluxy-premium-surface:hover::before {
+  opacity: 1;
+  animation-play-state: running;
+}
+
+[data-theme='glassy'] .glass-card.fluxy-premium-surface .game-card-thumb,
+[data-theme='glassy'] .glass-card.fluxy-premium-surface .game-card-info,
+[data-theme='glassy'] .glass-card.fluxy-premium-surface .hero-content,
+[data-theme='glassy'] .glass-card.fluxy-premium-surface .hero-stats {
+  z-index: 2;
+}

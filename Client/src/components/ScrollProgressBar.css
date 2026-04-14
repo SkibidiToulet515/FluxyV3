@@ -1,0 +1,40 @@
+.scroll-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 100000;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.scroll-progress-bar__fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(
+    90deg,
+    #a855f7,
+    #6366f1,
+    #22d3ee,
+    #34d399,
+    #fbbf24,
+    #a855f7
+  );
+  background-size: 200% 100%;
+  animation: scroll-progress-hue 8s linear infinite;
+  transition: width 0.12s ease-out;
+}
+
+@keyframes scroll-progress-hue {
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-progress-bar__fill {
+    animation: none;
+    background: linear-gradient(90deg, #a855f7, #22d3ee);
+  }
+}

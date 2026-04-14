@@ -33,6 +33,28 @@ export function ThemeProvider({ children }) {
     localStorage.setItem('fluxy-theme', currentTheme);
   }, [currentTheme, customThemeVars]);
 
+  useEffect(() => {
+    function onStorage(e) {
+      if (e.storageArea !== localStorage) return;
+      if (e.key === 'fluxy-theme' && typeof e.newValue === 'string' && e.newValue) {
+        setCurrentTheme(e.newValue);
+      }
+      if (e.key === 'fluxy-custom-theme') {
+        if (e.newValue) {
+          try {
+            setCustomThemeVars(JSON.parse(e.newValue));
+          } catch {
+            /* ignore */
+          }
+        } else {
+          setCustomThemeVars(null);
+        }
+      }
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   const saveCustomTheme = useCallback((vars) => {
     setCustomThemeVars(vars);
     localStorage.setItem('fluxy-custom-theme', JSON.stringify(vars));

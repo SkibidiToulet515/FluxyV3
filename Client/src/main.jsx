@@ -5,6 +5,7 @@ import App from './App';
 import { ThemeProvider } from './themes/ThemeContext';
 import { AuthProvider } from './utils/AuthContext';
 import './themes/globals.css';
+import './themes/premium-effects.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

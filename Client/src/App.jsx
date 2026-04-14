@@ -2,20 +2,26 @@ import { useState, useCallback } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Background from './components/Background';
+import AuroraBackground from './components/AuroraBackground';
+import FilmGrain from './components/FilmGrain';
+import NeuralParticles from './components/NeuralParticles';
+import ScrollProgressBar from './components/ScrollProgressBar';
 import CustomCursor from './components/CustomCursor';
 import LoadingScreen from './components/LoadingScreen';
+import WindowModeGate from './components/WindowModeGate';
+import ToastHost from './components/ToastHost';
 import Home from './pages/Home';
 import SubjectPage from './pages/SubjectPage';
 import Proxy from './pages/Proxy';
 import Chat from './pages/Chat';
 import Settings from './pages/Settings';
 import GamePlayer from './pages/GamePlayer';
-import GeminiPanel from './pages/GeminiPanel';
 import Login from './pages/Login';
 import AdminPanel from './pages/AdminPanel';
 import ModeratorPanel from './pages/ModeratorPanel';
+import ToolRouteHost from './pages/ToolRouteHost';
 import { useAuth } from './utils/AuthContext';
-import useClickEffect from './utils/useClickEffect';
+import useGlobalClickEffects from './utils/useGlobalClickEffects';
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -25,44 +31,38 @@ function RequireAuth({ children }) {
 }
 
 function AppShell() {
-  useClickEffect(true);
+  useGlobalClickEffects(true);
 
-  const cursorEnabled = typeof localStorage !== 'undefined'
-    ? localStorage.getItem('fluxy-custom-cursor') !== 'false'
-    : true;
+  const cursorEnabled =
+    typeof localStorage !== 'undefined' ? localStorage.getItem('fluxy-custom-cursor') !== 'false' : true;
 
   return (
     <>
+      <AuroraBackground />
       <Background />
+      <FilmGrain />
+      <NeuralParticles />
+      <ScrollProgressBar />
       <CustomCursor enabled={cursorEnabled} />
+      <ToastHost />
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route
-          path="/chat"
-          element={
-            <RequireAuth>
-              <Chat />
-            </RequireAuth>
-          }
-        />
-        <Route
-          element={
-            <RequireAuth>
-              <Layout />
-            </RequireAuth>
-          }
-        >
-          <Route path="/" element={<Home />} />
-          <Route path="/games" element={<Navigate to="/math" replace />} />
-          <Route path="/history" element={<Proxy />} />
-          <Route path="/proxy" element={<Navigate to="/history" replace />} />
-          <Route path="/math" element={<SubjectPage />} />
-          <Route path="/assistant" element={<GeminiPanel />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/moderator" element={<ModeratorPanel />} />
-          <Route path="/admin" element={<AdminPanel />} />
+        <Route element={<WindowModeGate />}>
+          <Route path="/chat" element={<RequireAuth><Chat /></RequireAuth>} />
+          <Route path="/games/:gameId" element={<GamePlayer />} />
+          <Route path="/play/:gameId" element={<GamePlayer />} />
+          <Route element={<RequireAuth><Layout /></RequireAuth>}>
+            <Route path="/" element={<Home />} />
+            <Route path="/games" element={<Navigate to="/math" replace />} />
+            <Route path="/history" element={<Proxy />} />
+            <Route path="/proxy" element={<Navigate to="/history" replace />} />
+            <Route path="/math" element={<SubjectPage />} />
+            <Route path="/tools/:toolId" element={<ToolRouteHost />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/moderator" element={<ModeratorPanel />} />
+            <Route path="/admin" element={<AdminPanel />} />
+          </Route>
         </Route>
-        <Route path="/play/:gameId" element={<GamePlayer />} />
       </Routes>
     </>
   );
