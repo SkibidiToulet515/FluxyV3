@@ -8,8 +8,6 @@ import NeuralParticles from './components/NeuralParticles';
 import ScrollProgressBar from './components/ScrollProgressBar';
 import CustomCursor from './components/CustomCursor';
 import LoadingScreen from './components/LoadingScreen';
-import WindowModeGate from './components/WindowModeGate';
-import ToastHost from './components/ToastHost';
 import Home from './pages/Home';
 import SubjectPage from './pages/SubjectPage';
 import Proxy from './pages/Proxy';
@@ -44,24 +42,21 @@ function AppShell() {
       <NeuralParticles />
       <ScrollProgressBar />
       <CustomCursor enabled={cursorEnabled} />
-      <ToastHost />
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route element={<WindowModeGate />}>
-          <Route path="/chat" element={<RequireAuth><Chat /></RequireAuth>} />
-          <Route path="/games/:gameId" element={<GamePlayer />} />
-          <Route path="/play/:gameId" element={<GamePlayer />} />
-          <Route element={<RequireAuth><Layout /></RequireAuth>}>
-            <Route path="/" element={<Home />} />
-            <Route path="/games" element={<Navigate to="/math" replace />} />
-            <Route path="/history" element={<Proxy />} />
-            <Route path="/proxy" element={<Navigate to="/history" replace />} />
-            <Route path="/math" element={<SubjectPage />} />
-            <Route path="/tools/:toolId" element={<ToolRouteHost />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/moderator" element={<ModeratorPanel />} />
-            <Route path="/admin" element={<AdminPanel />} />
-          </Route>
+        <Route path="/chat" element={<RequireAuth><Chat /></RequireAuth>} />
+        <Route path="/games/:gameId" element={<GamePlayer />} />
+        <Route path="/play/:gameId" element={<GamePlayer />} />
+        <Route element={<RequireAuth><Layout /></RequireAuth>}>
+          <Route path="/" element={<Home />} />
+          <Route path="/games" element={<Navigate to="/math" replace />} />
+          <Route path="/history" element={<Proxy />} />
+          <Route path="/proxy" element={<Navigate to="/history" replace />} />
+          <Route path="/math" element={<SubjectPage />} />
+          <Route path="/tools/:toolId" element={<ToolRouteHost />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/moderator" element={<ModeratorPanel />} />
+          <Route path="/admin" element={<AdminPanel />} />
         </Route>
       </Routes>
     </>

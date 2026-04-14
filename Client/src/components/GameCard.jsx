@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import { addRecentlyPlayed } from '../utils/api';
-import OpenInWindowButton from './OpenInWindowButton';
-import { gameStandalonePath } from '../standalone/paths';
 import './GameCard.css';
 
 const CATEGORY_COLORS = {
@@ -50,12 +48,6 @@ export default function GameCard({ game }) {
       <div className="game-card-flip-inner">
         <div className="game-card-face game-card-face--front">
           <div className="game-card-thumb" style={{ '--card-accent': color }}>
-            <OpenInWindowButton
-              path={gameStandalonePath(game.id)}
-              className="game-card-open-window"
-              iconOnly
-              label="Open game in separate window"
-            />
             <span className="game-card-initials">{initials}</span>
             <div className="game-card-play-overlay">
               <Play size={28} />

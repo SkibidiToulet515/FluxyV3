@@ -10,10 +10,6 @@ import {
   checkProviderHealth,
 } from '../services/providers';
 import Header from '../components/Header';
-import OpenInWindowButton from '../components/OpenInWindowButton';
-import { useWindowMode } from '../hooks/useWindowMode';
-import { useStandalonePageTitle } from '../hooks/useStandalonePageTitle';
-import { toolStandalonePath } from '../standalone/paths';
 import './Proxy.css';
 
 const PROVIDER_ICONS = { Zap, Shield };
@@ -108,8 +104,6 @@ async function ensureServiceWorker() {
 export default function Proxy() {
   const outlet = useOutletContext();
   const onMenuToggle = outlet?.onMenuToggle ?? (() => {});
-  const isWindow = useWindowMode();
-  useStandalonePageTitle('Proxy', isWindow);
   const [provider, setProvider] = useState(getActiveProvider);
   const [health, setHealth] = useState(null);
   const [checking, setChecking] = useState(true);
@@ -187,12 +181,7 @@ export default function Proxy() {
   if (!browsing) {
     return (
       <div className="proxy-page animate-fade-in">
-        {!isWindow && <Header title="Proxy" onMenuClick={onMenuToggle} />}
-        {!isWindow && (
-          <div className="proxy-standalone-launch glass-bg">
-            <OpenInWindowButton path={toolStandalonePath('proxy')} label="Open proxy in separate window" />
-          </div>
-        )}
+        <Header title="Proxy" onMenuClick={onMenuToggle} />
 
         <div className="proxy-landing">
           <div className="proxy-landing-card glass-card">
@@ -287,9 +276,6 @@ export default function Proxy() {
         </form>
 
         <div className="proxy-toolbar-actions">
-          {!isWindow && (
-            <OpenInWindowButton path={toolStandalonePath('proxy')} iconOnly label="Open proxy in separate window" />
-          )}
           <div className="proxy-toolbar-provider">
             <ProviderIcon size={13} />
             <span>{provider.name}</span>

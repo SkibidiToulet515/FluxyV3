@@ -103,20 +103,6 @@
   filter: drop-shadow(0 0 12px color-mix(in srgb, var(--card-accent) 70%, transparent));
 }
 
-.game-card-open-window {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  z-index: 5;
-  padding: 0.28rem !important;
-  min-width: auto !important;
-  border-radius: 8px !important;
-  background: rgba(0, 0, 0, 0.4) !important;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
 .game-card-thumb {
   position: relative;
   width: 100%;

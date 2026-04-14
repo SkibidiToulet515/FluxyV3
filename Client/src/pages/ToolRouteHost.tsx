@@ -2,9 +2,7 @@ import { Link, useParams } from 'react-router-dom';
 import Proxy from './Proxy';
 import './RouteHostFallback.css';
 
-/**
- * Canonical `/tools/:toolId` host. Keeps normal URLs for standalone windows.
- */
+/** `/tools/:toolId` — optional alias routes (e.g. `proxy` → Proxy UI). */
 export default function ToolRouteHost() {
   const { toolId } = useParams();
 
