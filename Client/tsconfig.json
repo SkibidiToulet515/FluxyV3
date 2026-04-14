@@ -16,8 +16,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "allowJs": true,
-    "checkJs": false,
-    "ignoreDeprecations": "6.0"
+    "checkJs": false
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "src/**/*.js", "src/**/*.jsx"],
   "references": [{ "path": "./tsconfig.node.json" }]
