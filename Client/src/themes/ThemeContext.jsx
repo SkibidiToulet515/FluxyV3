@@ -10,10 +10,15 @@ function loadCustomTheme() {
   } catch { return null; }
 }
 
+function resolveInitialTheme() {
+  const saved = localStorage.getItem('fluxy-theme') || 'glassy';
+  if (saved === '__custom') return saved;
+  if (themes[saved]) return saved;
+  return 'glassy';
+}
+
 export function ThemeProvider({ children }) {
-  const [currentTheme, setCurrentTheme] = useState(() => {
-    return localStorage.getItem('fluxy-theme') || 'glassy';
-  });
+  const [currentTheme, setCurrentTheme] = useState(resolveInitialTheme);
 
   const [customThemeVars, setCustomThemeVars] = useState(loadCustomTheme);
 
@@ -24,7 +29,10 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     const theme = allThemes[currentTheme];
-    if (!theme) return;
+    if (!theme) {
+      setCurrentTheme('glassy');
+      return;
+    }
     const root = document.documentElement;
     Object.entries(theme.vars).forEach(([key, value]) => {
       root.style.setProperty(key, value);
