@@ -1,18 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
+import { getPerformanceProfile } from '../utils/performanceProfile';
 
 /**
  * When the element enters the viewport, sets visible=true so staggered children can animate.
  */
 export function useRevealStagger(options = {}) {
   const ref = useRef(null);
-  const [visible, setVisible] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      ? true
-      : false,
-  );
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+    try {
+      if (getPerformanceProfile().revealInstant) return true;
+    } catch {
+      /* SSR */
+    }
+    return false;
+  });
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setVisible(true);
+      return;
+    }
+    if (getPerformanceProfile().revealInstant) {
       setVisible(true);
       return;
     }

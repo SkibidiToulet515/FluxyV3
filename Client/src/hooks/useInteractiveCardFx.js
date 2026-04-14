@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { getPerformanceProfile } from '../utils/performanceProfile';
 
 /**
  * Spotlight + 3D tilt + CSS vars for premium card surface.
@@ -7,6 +8,7 @@ import { useCallback, useEffect, useRef } from 'react';
 export function useInteractiveCardFx() {
   const ref = useRef(null);
   const reducedRef = useRef(false);
+  const liteRef = useRef(typeof window !== 'undefined' && getPerformanceProfile().tier === 'lite');
 
   useEffect(() => {
     reducedRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -14,7 +16,7 @@ export function useInteractiveCardFx() {
 
   const onMouseMove = useCallback((e) => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || liteRef.current) return;
     const rect = el.getBoundingClientRect();
     const px = (e.clientX - rect.left) / rect.width - 0.5;
     const py = (e.clientY - rect.top) / rect.height - 0.5;
@@ -28,7 +30,7 @@ export function useInteractiveCardFx() {
 
   const onMouseLeave = useCallback(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || liteRef.current) return;
     el.style.setProperty('--spot-x', '50%');
     el.style.setProperty('--spot-y', '50%');
     el.style.setProperty('--tilt-x', '0deg');

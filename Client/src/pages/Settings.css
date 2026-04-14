@@ -433,6 +433,80 @@
   margin: 0 0 0.5rem;
 }
 
+/* --- Performance presets (Effects) --- */
+.settings-perf-presets {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+
+.settings-perf-presets-header {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+  color: var(--accent);
+}
+
+.settings-perf-presets-header strong {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+}
+
+.settings-perf-presets-header p {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0.2rem 0 0;
+  line-height: 1.45;
+}
+
+.settings-perf-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.settings-perf-buttons .btn.active {
+  border-color: var(--accent, #6366f1);
+  box-shadow: 0 0 0 1px var(--accent-soft, rgba(99, 102, 241, 0.2));
+}
+
+.settings-perf-status {
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--text-secondary, #a1a1aa);
+  margin-bottom: 0.875rem;
+}
+
+.settings-perf-status p {
+  margin: 0;
+}
+
+.settings-perf-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+  background: var(--accent-soft, rgba(99, 102, 241, 0.2));
+  color: var(--accent-hover, #818cf8);
+}
+
+.settings-perf-badge--manual {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary, #e4e4e7);
+}
+
+.settings-perf-hint {
+  color: var(--text-muted, #71717a);
+  font-size: 0.75rem;
+}
+
 /* --- Toggle Rows --- */
 .settings-toggles {
   display: flex;

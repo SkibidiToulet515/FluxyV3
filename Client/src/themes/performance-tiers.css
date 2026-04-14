@@ -1,0 +1,86 @@
+/* =============================================================================
+   Visual cost reduction for data-fluxy-perf="lite" | "balanced"
+   (set from utils/performanceProfile.js — auto or Settings override)
+   ============================================================================= */
+
+html[data-fluxy-perf='lite'] .fluxy-text-shimmer,
+html[data-fluxy-perf='balanced'] .fluxy-text-shimmer {
+  animation: none;
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  background-size: 100% 100%;
+}
+
+html[data-fluxy-perf='lite'] .btn::before,
+html[data-fluxy-perf='balanced'] .btn::before {
+  display: none;
+}
+
+html[data-fluxy-perf='lite'] .scroll-progress-bar__fill {
+  animation: none;
+  background: linear-gradient(90deg, #a855f7, #22d3ee);
+}
+
+html[data-fluxy-perf='balanced'] .scroll-progress-bar__fill {
+  animation-duration: 24s;
+}
+
+/* Lighter glass: backdrop-filter is expensive on integrated GPUs */
+html[data-fluxy-perf='lite'] .glass-card,
+html[data-fluxy-perf='lite'] .glass-bg {
+  backdrop-filter: blur(8px) saturate(1.1) !important;
+  -webkit-backdrop-filter: blur(8px) saturate(1.1) !important;
+}
+
+html[data-fluxy-perf='balanced'] .glass-card,
+html[data-fluxy-perf='balanced'] .glass-bg {
+  backdrop-filter: blur(12px) saturate(1.2) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.2) !important;
+}
+
+[data-theme='glassy'][data-fluxy-perf='lite'] .glass-card,
+[data-theme='glassy'][data-fluxy-perf='lite'] .glass-bg {
+  backdrop-filter: blur(10px) saturate(1.15) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(1.15) !important;
+}
+
+[data-theme='glassy'][data-fluxy-perf='balanced'] .glass-card,
+[data-theme='glassy'][data-fluxy-perf='balanced'] .glass-bg {
+  backdrop-filter: blur(18px) saturate(1.35) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.35) !important;
+}
+
+/* Premium card: drop animated border + 3D tilt on lite */
+html[data-fluxy-perf='lite'] .fluxy-premium-surface {
+  transform: none !important;
+}
+
+html[data-fluxy-perf='lite'] .fluxy-premium-surface:hover,
+html[data-fluxy-perf='lite'] .fluxy-premium-surface:active {
+  transform: translateY(-2px) !important;
+}
+
+html[data-fluxy-perf='lite'] .fluxy-premium-surface::before {
+  display: none !important;
+}
+
+html[data-fluxy-perf='lite'] .fluxy-premium-surface::after {
+  opacity: 0 !important;
+}
+
+html[data-fluxy-perf='balanced'] .fluxy-premium-surface::before {
+  animation-duration: 12s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-fluxy-perf='balanced'] .fluxy-premium-surface::before {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+/* Stagger: show immediately on lite (JS also sets revealInstant) */
+html[data-fluxy-perf='lite'] .reveal-group .reveal-item {
+  opacity: 1;
+  transform: none;
+  animation: none !important;
+}

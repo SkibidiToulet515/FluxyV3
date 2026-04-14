@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useLayoutEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Background from './components/Background';
@@ -20,6 +20,7 @@ import ModeratorPanel from './pages/ModeratorPanel';
 import ToolRouteHost from './pages/ToolRouteHost';
 import { useAuth } from './utils/AuthContext';
 import useGlobalClickEffects from './utils/useGlobalClickEffects';
+import { getPerformanceProfile } from './utils/performanceProfile';
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -31,17 +32,30 @@ function RequireAuth({ children }) {
 function AppShell() {
   useGlobalClickEffects(true);
 
+  const perf = useMemo(() => getPerformanceProfile(), []);
+
+  useLayoutEffect(() => {
+    document.documentElement.dataset.fluxyPerf = perf.tier;
+    return () => {
+      delete document.documentElement.dataset.fluxyPerf;
+    };
+  }, [perf.tier]);
+
   const cursorEnabled =
     typeof localStorage !== 'undefined' ? localStorage.getItem('fluxy-custom-cursor') !== 'false' : true;
 
   return (
     <>
-      <AuroraBackground />
-      <Background />
-      <FilmGrain />
-      <NeuralParticles />
+      <AuroraBackground variant={perf.aurora} />
+      <Background mode={perf.backgroundMode} />
+      {perf.filmGrain ? <FilmGrain /> : null}
+      <NeuralParticles
+        dotCount={perf.neuralDots}
+        linkDistance={perf.neuralLinkDist}
+        frameSkip={perf.neuralFrameSkip}
+      />
       <ScrollProgressBar />
-      <CustomCursor enabled={cursorEnabled} />
+      <CustomCursor enabled={cursorEnabled} showGlow={perf.cursorGlow} />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/chat" element={<RequireAuth><Chat /></RequireAuth>} />

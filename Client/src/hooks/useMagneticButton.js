@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { getPerformanceProfile } from '../utils/performanceProfile';
 
 const STRENGTH = 0.28;
 const MAX_SHIFT = 14;
@@ -12,6 +13,7 @@ export function useMagneticButton() {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    if (!getPerformanceProfile().magnetic) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     if (window.matchMedia('(pointer: coarse)').matches) return;
 

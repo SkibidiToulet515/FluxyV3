@@ -6,6 +6,7 @@ import { ThemeProvider } from './themes/ThemeContext';
 import { AuthProvider } from './utils/AuthContext';
 import './themes/globals.css';
 import './themes/premium-effects.css';
+import './themes/performance-tiers.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

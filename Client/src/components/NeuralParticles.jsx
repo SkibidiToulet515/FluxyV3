@@ -1,20 +1,29 @@
 import { useEffect, useRef } from 'react';
 import './NeuralParticles.css';
 
-const DOT_COUNT = 80;
-const LINK_DIST = 120;
-const LINK_DIST_SQ = LINK_DIST * LINK_DIST;
+const DEFAULT_LINK = 120;
 
-export default function NeuralParticles() {
+/**
+ * @param {{ dotCount?: number, linkDistance?: number, frameSkip?: number }} props
+ * dotCount 0 = render nothing (lite tier).
+ */
+export default function NeuralParticles({
+  dotCount = 80,
+  linkDistance = DEFAULT_LINK,
+  frameSkip = 0,
+}) {
   const canvasRef = useRef(null);
   const rafRef = useRef(0);
   const dotsRef = useRef([]);
+  const frameRef = useRef(0);
 
   useEffect(() => {
+    if (dotCount <= 0) return undefined;
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) return undefined;
     const ctx = canvas.getContext('2d');
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const linkDistSq = linkDistance * linkDistance;
 
     let w = 0;
     let h = 0;
@@ -25,8 +34,8 @@ export default function NeuralParticles() {
       w = canvas.width = window.innerWidth;
       h = canvas.height = window.innerHeight;
       const dots = dotsRef.current;
-      if (dots.length !== DOT_COUNT) {
-        dotsRef.current = Array.from({ length: DOT_COUNT }, () => ({
+      if (dots.length !== dotCount) {
+        dotsRef.current = Array.from({ length: dotCount }, () => ({
           x: Math.random() * w,
           y: Math.random() * h,
           vx: (Math.random() - 0.5) * (reduced ? 0 : 0.35),
@@ -55,7 +64,7 @@ export default function NeuralParticles() {
     resize();
     window.addEventListener('resize', resize);
 
-    if (reduced) {
+    function drawStaticFrame() {
       const dots = dotsRef.current;
       const [r, g, b] = themeRgb();
       ctx.clearRect(0, 0, w, h);
@@ -63,7 +72,7 @@ export default function NeuralParticles() {
         for (let j = i + 1; j < dots.length; j++) {
           const dx = dots[i].x - dots[j].x;
           const dy = dots[i].y - dots[j].y;
-          if (dx * dx + dy * dy < LINK_DIST_SQ) {
+          if (dx * dx + dy * dy < linkDistSq) {
             ctx.strokeStyle = `rgba(${r},${g},${b},0.12)`;
             ctx.lineWidth = 0.6;
             ctx.beginPath();
@@ -77,10 +86,28 @@ export default function NeuralParticles() {
         ctx.arc(dots[i].x, dots[i].y, 1.2, 0, Math.PI * 2);
         ctx.fill();
       }
-      return () => window.removeEventListener('resize', resize);
+    }
+
+    if (reduced) {
+      drawStaticFrame();
+      const onR = () => {
+        resize();
+        drawStaticFrame();
+      };
+      window.removeEventListener('resize', resize);
+      window.addEventListener('resize', onR);
+      return () => {
+        window.removeEventListener('resize', onR);
+      };
     }
 
     function tick() {
+      frameRef.current += 1;
+      if (frameSkip > 0 && frameRef.current % (frameSkip + 1) !== 0) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+
       const dots = dotsRef.current;
       const [r, g, b] = themeRgb();
 
@@ -100,8 +127,8 @@ export default function NeuralParticles() {
           const dx = dots[i].x - dots[j].x;
           const dy = dots[i].y - dots[j].y;
           const d2 = dx * dx + dy * dy;
-          if (d2 < LINK_DIST_SQ) {
-            const a = (1 - d2 / LINK_DIST_SQ) * 0.22;
+          if (d2 < linkDistSq) {
+            const a = (1 - d2 / linkDistSq) * 0.22;
             ctx.strokeStyle = `rgba(${r},${g},${b},${a})`;
             ctx.lineWidth = 0.7;
             ctx.beginPath();
@@ -127,7 +154,11 @@ export default function NeuralParticles() {
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener('resize', resize);
     };
-  }, []);
+  }, [dotCount, linkDistance, frameSkip]);
+
+  if (dotCount <= 0) {
+    return null;
+  }
 
   return <canvas ref={canvasRef} className="neural-particles-canvas" aria-hidden />;
 }

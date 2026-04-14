@@ -3,7 +3,7 @@ import './CustomCursor.css';
 
 const GLOW_LERP = 0.055;
 
-export default function CustomCursor({ enabled = true }) {
+export default function CustomCursor({ enabled = true, showGlow = true }) {
   const dotRef = useRef(null);
   const ringRef = useRef(null);
   const glowRef = useRef(null);
@@ -92,7 +92,7 @@ export default function CustomCursor({ enabled = true }) {
       visible.current = false;
       if (dotRef.current) dotRef.current.style.opacity = '0';
       if (ringRef.current) ringRef.current.style.opacity = '0';
-      if (glowRef.current) glowRef.current.style.opacity = '0';
+      if (showGlow && glowRef.current) glowRef.current.style.opacity = '0';
     }
 
     function onDown() {
@@ -120,7 +120,7 @@ export default function CustomCursor({ enabled = true }) {
           const sy = p ? 1.12 : h ? 1.32 : 1;
           ringRef.current.style.transform = `translate(${nx}px, ${ny}px) scale(${sx}, ${sy})`;
         }
-        if (glowRef.current && visible.current) {
+        if (showGlow && glowRef.current && visible.current) {
           const g = glowPos.current;
           const tx = pos.current.x;
           const ty = pos.current.y;
@@ -129,7 +129,7 @@ export default function CustomCursor({ enabled = true }) {
           const glowScale = pressedRef.current ? 0.9 : hoveringRef.current ? 1.15 : 1;
           glowRef.current.style.transform = `translate(${g.x}px, ${g.y}px) scale(${glowScale})`;
         }
-      } else if (glowRef.current) {
+      } else if (showGlow && glowRef.current) {
         glowRef.current.style.transform = `translate(${pos.current.x}px, ${pos.current.y}px)`;
       }
       raf = requestAnimationFrame(animateRing);
@@ -155,13 +155,13 @@ export default function CustomCursor({ enabled = true }) {
       window.removeEventListener('pointerup', onUp, { capture: true });
       window.removeEventListener('pointercancel', onUp, { capture: true });
     };
-  }, [enabled]);
+  }, [enabled, showGlow]);
 
   if (!enabled) return null;
 
   return (
     <>
-      <div ref={glowRef} className="cc-glow" style={{ opacity: 0 }} aria-hidden />
+      {showGlow ? <div ref={glowRef} className="cc-glow" style={{ opacity: 0 }} aria-hidden /> : null}
       <div ref={dotRef} className="cc-dot" style={{ opacity: 0 }} />
       <div
         ref={ringRef}

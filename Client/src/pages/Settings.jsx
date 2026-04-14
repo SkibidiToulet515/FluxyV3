@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
   Palette, Layout, User, Circle, Check, Zap, Shield, Wifi, Camera, Loader2,
   ShieldCheck, Flag, Paintbrush, Image, Sparkles, MousePointer, Download,
-  Upload, Trash2, ToggleLeft, ToggleRight, Eye,
+  Upload, Trash2, ToggleLeft, ToggleRight, Eye, Cpu,
 } from 'lucide-react';
 import { useTheme } from '../themes/ThemeContext';
 import { useAuth } from '../utils/AuthContext';
@@ -17,6 +17,13 @@ import {
 import { uploadProfilePicture, uploadUserBackground, deleteUserBackground } from '../services/storage';
 import { submitUserReport, updateUserSettings } from '../services/firestore';
 import { apiJson } from '../services/apiClient';
+import {
+  FLUXY_PERFORMANCE_KEY,
+  getPerformancePreset,
+  getPerformanceProfile,
+  detectTierFromDevice,
+  PERFORMANCE_TIER_LABELS,
+} from '../utils/performanceProfile';
 import ThemeMaker from '../components/ThemeMaker';
 import Header from '../components/Header';
 import './Settings.css';
@@ -42,6 +49,20 @@ export default function Settings() {
 
   const [cursorEnabled, setCursorEnabled] = useState(() => localStorage.getItem('fluxy-custom-cursor') !== 'false');
   const [clickEnabled, setClickEnabled] = useState(() => localStorage.getItem('fluxy-click-effect') !== 'false');
+  const [perfPreset, setPerfPreset] = useState(() => getPerformancePreset());
+
+  const perfSnapshot = useMemo(() => {
+    const preset = getPerformancePreset();
+    const profile = getPerformanceProfile();
+    const detectedTier = detectTierFromDevice();
+    return {
+      preset,
+      effectiveTier: profile.tier,
+      detectedTier,
+      effectiveLabel: PERFORMANCE_TIER_LABELS[profile.tier],
+      detectedLabel: PERFORMANCE_TIER_LABELS[detectedTier],
+    };
+  }, []);
 
   useEffect(() => {
     getAllProviders().forEach(async (p) => {
@@ -72,6 +93,16 @@ export default function Settings() {
     const next = !clickEnabled;
     setClickEnabled(next);
     localStorage.setItem('fluxy-click-effect', String(next));
+    window.location.reload();
+  }
+
+  function applyPerformancePreset(mode) {
+    if (mode === 'auto') {
+      localStorage.removeItem(FLUXY_PERFORMANCE_KEY);
+    } else {
+      localStorage.setItem(FLUXY_PERFORMANCE_KEY, mode);
+    }
+    setPerfPreset(mode === 'auto' ? 'auto' : mode);
     window.location.reload();
   }
 
@@ -131,6 +162,68 @@ export default function Settings() {
           <div>
             <h3>Effects</h3>
             <p>Toggle visual effects</p>
+          </div>
+        </div>
+        <div className="settings-perf-presets">
+          <div className="settings-perf-presets-header">
+            <Cpu size={18} />
+            <div>
+              <strong>Graphics performance</strong>
+              <p>
+                <strong>Auto</strong> chooses a tier from this device (CPU, memory when available, save-data, and
+                reduced-motion). You can override anytime; the page reloads to apply.
+              </p>
+            </div>
+          </div>
+          <div className="settings-perf-status" role="status">
+            {perfSnapshot.preset === 'auto' && (
+              <p>
+                <span className="settings-perf-badge">Auto</span>
+                Active profile: <strong>{perfSnapshot.effectiveLabel}</strong> — chosen automatically for this
+                device. Use the buttons below if you want to force a different look.
+              </p>
+            )}
+            {perfSnapshot.preset === 'low' && (
+              <p>
+                <span className="settings-perf-badge settings-perf-badge--manual">Your choice</span>
+                Locked to <strong>{perfSnapshot.effectiveLabel}</strong>.{' '}
+                <span className="settings-perf-hint">
+                  With <strong>Auto</strong>, this device would use {perfSnapshot.detectedLabel}.
+                </span>
+              </p>
+            )}
+            {perfSnapshot.preset === 'high' && (
+              <p>
+                <span className="settings-perf-badge settings-perf-badge--manual">Your choice</span>
+                Locked to <strong>{perfSnapshot.effectiveLabel}</strong>.{' '}
+                <span className="settings-perf-hint">
+                  With <strong>Auto</strong>, this device would use {perfSnapshot.detectedLabel}.
+                </span>
+              </p>
+            )}
+          </div>
+          <div className="settings-perf-buttons">
+            <button
+              type="button"
+              className={`btn btn-secondary ${perfPreset === 'auto' ? 'active' : ''}`}
+              onClick={() => applyPerformancePreset('auto')}
+            >
+              Auto (detect)
+            </button>
+            <button
+              type="button"
+              className={`btn btn-secondary ${perfPreset === 'low' ? 'active' : ''}`}
+              onClick={() => applyPerformancePreset('low')}
+            >
+              Lower graphics
+            </button>
+            <button
+              type="button"
+              className={`btn btn-secondary ${perfPreset === 'high' ? 'active' : ''}`}
+              onClick={() => applyPerformancePreset('high')}
+            >
+              Best visuals
+            </button>
           </div>
         </div>
         <div className="settings-toggles">
