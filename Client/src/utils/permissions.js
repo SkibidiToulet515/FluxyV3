@@ -2,6 +2,9 @@
 
 export const OWNER_ROLE_KEY = 'owner';
 
+/** roleDefinitions doc ids that cannot be deleted (mirrors Server getDefaultRoleDefinitions keys). */
+export const BUILTIN_ROLE_KEYS = ['user', 'mod', 'admin', OWNER_ROLE_KEY];
+
 /** Permissions only assignable by holders of protect_owner (mirrors Server/lib/rbac.js). */
 export const OWNER_ONLY_PERMISSION_KEYS = ['protect_owner'];
 

@@ -77,6 +77,7 @@ export async function createUserDoc(uid, data) {
     status: 'online',
     avatar: data.avatar || null,
     bio: '',
+    hasCompletedReferral: false,
     createdAt: serverTimestamp(),
   });
 }

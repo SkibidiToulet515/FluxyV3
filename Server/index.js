@@ -17,6 +17,7 @@ import moderationRouter from './routes/moderation.js';
 import rolesRouter from './routes/roles.js';
 import authResolveRouter from './routes/authResolve.js';
 import exportRouter from './routes/export.js';
+import onboardingRouter from './routes/onboarding.js';
 import { initFirebase, ensureDefaultRoleDefinitions } from './config/firebase.js';
 import { UGS_DIR } from './config/paths.js';
 import { ugsLfsGuard } from './middleware/ugsLfsGuard.js';
@@ -81,6 +82,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/moderation', moderationRouter);
 app.use('/api/roles', rolesRouter);
 app.use('/api', exportRouter);
+app.use('/api', onboardingRouter);
 
 // --- Serve built frontend in production ---
 if (process.env.NODE_ENV === 'production') {

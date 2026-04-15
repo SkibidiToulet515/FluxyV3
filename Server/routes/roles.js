@@ -11,6 +11,7 @@ import {
   assertCanUpdateRoleDefinition,
   assertCanDeleteRoleDefinition,
   computePrivilegeTierFromPermissions,
+  effectivePermissions,
 } from '../lib/rbac.js';
 
 const router = express.Router();
@@ -142,21 +143,59 @@ router.patch('/:key', requireAnyPermission('create_roles', 'manage_roles'), asyn
   }
 });
 
-router.delete('/:key', requireAnyPermission('delete_roles', 'manage_roles'), async (req, res) => {
-  if (!isFirebaseAdminReady()) return res.status(503).json({ error: 'Roles unavailable' });
-  const { key } = req.params;
-  try {
-    const db = getAdminFirestore();
-    await assertCanDeleteRoleDefinition(db, req.uid, key);
-    await db.collection('roleDefinitions').doc(key).delete();
-    res.json({ ok: true });
-  } catch (err) {
-    if (err.code) {
-      return res.status(403).json({ error: err.message, code: err.code });
+router.delete(
+  '/:key',
+  requireAnyPermission('delete_roles', 'manage_roles', 'protect_owner'),
+  async (req, res) => {
+    if (!isFirebaseAdminReady()) return res.status(503).json({ error: 'Roles unavailable' });
+    const { key } = req.params;
+    try {
+      const db = getAdminFirestore();
+      await assertCanDeleteRoleDefinition(db, req.uid, key);
+
+      const { permissions } = await getUserPermissions(req.uid);
+      const eff = effectivePermissions(permissions);
+      const usersSnap = await db.collection('users').where('role', '==', key).get();
+      let reassigned = 0;
+      if (!usersSnap.empty) {
+        if (!eff.protect_owner) {
+          return res.status(400).json({
+            error:
+              'Cannot delete this role while users are assigned to it. Reassign those accounts first, or sign in as Owner to delete the role and move everyone to Member.',
+            code: 'ROLE_IN_USE',
+            count: usersSnap.size,
+          });
+        }
+        const chunk = 400;
+        for (let i = 0; i < usersSnap.docs.length; i += chunk) {
+          const batch = db.batch();
+          for (const d of usersSnap.docs.slice(i, i + chunk)) {
+            batch.update(d.ref, { role: 'user' });
+          }
+          await batch.commit();
+        }
+        reassigned = usersSnap.size;
+      }
+
+      await db.collection('roleDefinitions').doc(key).delete();
+      res.json({ ok: true, reassigned });
+    } catch (err) {
+      if (err.code) {
+        const status =
+          err.code === 'NOT_FOUND'
+            ? 404
+            : err.code === 'BUILTIN_DELETE'
+              || err.code === 'OWNER_DELETE'
+              || err.code === 'PROTECTED_DELETE'
+              || err.code === 'DELETE_ROLES'
+              ? 403
+              : 400;
+        return res.status(status).json({ error: err.message, code: err.code });
+      }
+      console.error('[Roles] delete:', err);
+      res.status(500).json({ error: 'Failed to delete role' });
     }
-    console.error('[Roles] delete:', err);
-    res.status(500).json({ error: 'Failed to delete role' });
-  }
-});
+  },
+);
 
 export default router;

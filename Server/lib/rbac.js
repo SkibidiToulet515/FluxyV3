@@ -309,16 +309,24 @@ export async function assertCanDeleteRoleDefinition(db, actorUid, roleKey) {
     throw e;
   }
   const existing = await loadRoleDefinition(db, roleKey);
-  if (existing?.protected) {
-    const e = new Error('Cannot delete protected role');
-    e.code = 'PROTECTED_DELETE';
+  if (!existing) {
+    const e = new Error('Role not found');
+    e.code = 'NOT_FOUND';
     throw e;
   }
+
   const actorUser = await db.collection('users').doc(actorUid).get();
   const ark = actorUser.exists ? actorUser.data().role || 'user' : 'user';
   const actorDef = await loadRoleDefinition(db, ark);
   const actorPerms = effectivePermissions(actorDef?.permissions || {});
-  if (!actorPerms.delete_roles && !actorPerms.manage_roles) {
+
+  if (existing.protected === true) {
+    if (!actorPerms.protect_owner) {
+      const e = new Error('Cannot delete protected role');
+      e.code = 'PROTECTED_DELETE';
+      throw e;
+    }
+  } else if (!actorPerms.delete_roles && !actorPerms.manage_roles) {
     const e = new Error('Missing permission to delete roles');
     e.code = 'DELETE_ROLES';
     throw e;

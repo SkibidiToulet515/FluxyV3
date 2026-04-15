@@ -202,6 +202,8 @@ export function AuthProvider({ children }) {
       uid: profile.uid,
       mutedUntil: profile.mutedUntil || null,
       chatRestricted: profile.chatRestricted === true,
+      /** Referral onboarding: show modal only when explicitly false (new signups). */
+      needsReferralOnboarding: profile.hasCompletedReferral === false,
     } : null,
   };
 
