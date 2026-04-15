@@ -109,7 +109,7 @@ export default function Home() {
           </div>
           <div
             ref={recentReveal.ref}
-            className={`game-grid reveal-group${recentReveal.visible ? ' reveal-group--visible' : ''}`}
+            className={`game-grid reveal-group${recentReveal.visible || !loading ? ' reveal-group--visible' : ''}`}
           >
             {recentlyPlayed.slice(0, 6).map((game, i) => (
               <div key={game.id} className="reveal-item" style={{ '--stagger': i }}>
@@ -139,7 +139,7 @@ export default function Home() {
         ) : (
           <div
             ref={featuredReveal.ref}
-            className={`game-grid reveal-group${featuredReveal.visible ? ' reveal-group--visible' : ''}`}
+            className={`game-grid reveal-group${featuredReveal.visible || !loading ? ' reveal-group--visible' : ''}`}
           >
             {featured.map((game, i) => (
               <div key={game.id} className="reveal-item" style={{ '--stagger': i }}>
@@ -166,7 +166,7 @@ export default function Home() {
         ) : (
           <div
             ref={trendingReveal.ref}
-            className={`game-grid reveal-group${trendingReveal.visible ? ' reveal-group--visible' : ''}`}
+            className={`game-grid reveal-group${trendingReveal.visible || !loading ? ' reveal-group--visible' : ''}`}
           >
             {trending.map((game, i) => (
               <div key={game.id} className="reveal-item" style={{ '--stagger': i }}>

@@ -43,20 +43,38 @@ async function writeModerationLog(actorUid, action, details = {}, targetUid = nu
   });
 }
 
+function isIndexError(err) {
+  const c = err?.code;
+  return c === 9 || c === 'failed-precondition' || String(err?.message || '').includes('index');
+}
+
 async function hasOpenAppeal(db, punishmentId) {
-  const snap = await db
-    .collection('appeals')
-    .where('punishmentId', '==', punishmentId)
-    .where('status', 'in', OPEN_STATUSES)
-    .limit(1)
-    .get();
-  return !snap.empty;
+  try {
+    const snap = await db
+      .collection('appeals')
+      .where('punishmentId', '==', punishmentId)
+      .where('status', 'in', OPEN_STATUSES)
+      .limit(1)
+      .get();
+    return !snap.empty;
+  } catch (err) {
+    if (isIndexError(err)) {
+      console.warn('[Appeals] hasOpenAppeal index query failed; scanning (slow):', err.message);
+      const loose = await db
+        .collection('appeals')
+        .where('punishmentId', '==', punishmentId)
+        .limit(25)
+        .get();
+      return loose.docs.some((d) => OPEN_STATUSES.includes(d.data().status));
+    }
+    throw err;
+  }
 }
 
 async function notifyStaffNewAppeal(db, actorUid, appealId, ptype) {
   try {
     const snap = await db.collection('users').where('role', 'in', ['mod', 'admin', 'owner']).limit(45).get();
-    await Promise.all(
+    const results = await Promise.allSettled(
       snap.docs.map((d) => {
         if (d.id === actorUid) return Promise.resolve();
         return notifyUser(d.id, {
@@ -67,6 +85,10 @@ async function notifyStaffNewAppeal(db, actorUid, appealId, ptype) {
         });
       }),
     );
+    const failed = results.filter((r) => r.status === 'rejected');
+    if (failed.length) {
+      console.warn('[Appeals] notifyStaffNewAppeal: some notifications failed', failed.length);
+    }
   } catch (e) {
     console.warn('[Appeals] notifyStaffNewAppeal:', e?.message || e);
   }
@@ -290,36 +312,52 @@ function formatPunishmentOut(p) {
 }
 
 async function checkCooldown(db, userId, punishmentId) {
-  const snap = await db
-    .collection('appeals')
-    .where('userId', '==', userId)
-    .where('punishmentId', '==', punishmentId)
-    .orderBy('createdAt', 'desc')
-    .limit(1)
-    .get();
-  if (snap.empty) return { ok: true };
-  const last = snap.docs[0].data();
-  const st = last.status;
-  if (OPEN_STATUSES.includes(st)) return { ok: false, reason: 'open' };
-  const created = last.createdAt?.toDate?.();
-  if (!created) return { ok: true };
-  if (Date.now() - created.getTime() < COOLDOWN_SAME_PUNISHMENT_MS) {
-    return { ok: false, reason: 'cooldown' };
+  try {
+    const snap = await db
+      .collection('appeals')
+      .where('userId', '==', userId)
+      .where('punishmentId', '==', punishmentId)
+      .orderBy('createdAt', 'desc')
+      .limit(1)
+      .get();
+    if (snap.empty) return { ok: true };
+    const last = snap.docs[0].data();
+    const st = last.status;
+    if (OPEN_STATUSES.includes(st)) return { ok: false, reason: 'open' };
+    const created = last.createdAt?.toDate?.();
+    if (!created) return { ok: true };
+    if (Date.now() - created.getTime() < COOLDOWN_SAME_PUNISHMENT_MS) {
+      return { ok: false, reason: 'cooldown' };
+    }
+    return { ok: true };
+  } catch (err) {
+    if (isIndexError(err)) {
+      console.warn('[Appeals] checkCooldown index query failed; lenient allow:', err.message);
+      return { ok: true };
+    }
+    throw err;
   }
-  return { ok: true };
 }
 
 async function checkWeeklyCap(db, userId) {
-  const weekAgo = new Date(Date.now() - 7 * 86400000);
-  const snap = await db
-    .collection('appeals')
-    .where('userId', '==', userId)
-    .where('createdAt', '>=', admin.firestore.Timestamp.fromDate(weekAgo))
-    .get();
-  if (snap.size >= MAX_APPEALS_PER_WEEK) {
-    return { ok: false, error: 'Too many appeals this week. Try again later.' };
+  try {
+    const weekAgo = new Date(Date.now() - 7 * 86400000);
+    const snap = await db
+      .collection('appeals')
+      .where('userId', '==', userId)
+      .where('createdAt', '>=', admin.firestore.Timestamp.fromDate(weekAgo))
+      .get();
+    if (snap.size >= MAX_APPEALS_PER_WEEK) {
+      return { ok: false, error: 'Too many appeals this week. Try again later.' };
+    }
+    return { ok: true };
+  } catch (err) {
+    if (isIndexError(err)) {
+      console.warn('[Appeals] checkWeeklyCap index query failed; skipping cap:', err.message);
+      return { ok: true };
+    }
+    throw err;
   }
-  return { ok: true };
 }
 
 /** User's appeal history */
@@ -414,20 +452,38 @@ router.post('/', async (req, res) => {
       });
     }
 
-    await notifyUser(uid, {
-      type: 'appeal_submitted',
-      title: 'Appeal submitted',
-      body: 'Your appeal was received and will be reviewed by staff.',
-      appealId: appealRef.id,
-    });
+    try {
+      await notifyUser(uid, {
+        type: 'appeal_submitted',
+        title: 'Appeal submitted',
+        body: 'Your appeal was received and will be reviewed by staff.',
+        appealId: appealRef.id,
+      });
+    } catch (e) {
+      console.warn('[Appeals] notify submitter:', e?.message || e);
+    }
 
-    await notifyStaffNewAppeal(db, uid, appealRef.id, resolved.type);
-    await writeModerationLog(uid, 'appeal_submitted', { appealId: appealRef.id, punishmentId }, uid);
+    try {
+      await notifyStaffNewAppeal(db, uid, appealRef.id, resolved.type);
+    } catch (e) {
+      console.warn('[Appeals] notify staff:', e?.message || e);
+    }
+
+    try {
+      await writeModerationLog(uid, 'appeal_submitted', { appealId: appealRef.id, punishmentId }, uid);
+    } catch (e) {
+      console.warn('[Appeals] moderation log:', e?.message || e);
+    }
 
     res.json({ ok: true, appealId: appealRef.id });
   } catch (err) {
     console.error('[Appeals] create:', err);
-    res.status(500).json({ error: 'Failed to submit appeal' });
+    const msg = err?.message || 'Failed to submit appeal';
+    const code = err?.code;
+    res.status(500).json({
+      error: msg.length < 220 ? msg : 'Failed to submit appeal',
+      code: code || undefined,
+    });
   }
 });
 
