@@ -1,4 +1,5 @@
 import express from 'express';
+import admin from 'firebase-admin';
 import { requireAuth, requirePermission } from '../middleware/auth.js';
 import { getAdminFirestore } from '../config/firebase.js';
 import { assertCanAssignUserRole, assertCanModifyTargetUser } from '../lib/rbac.js';
@@ -54,6 +55,23 @@ router.post('/users/:uid/ban', requirePermission('ban_users'), async (req, res) 
     }
     console.error('[Admin] ban error:', err);
     res.status(500).json({ error: 'Failed to ban user' });
+  }
+});
+
+/** Reset referral onboarding so the user sees “who told you” again (API-only). */
+router.post('/users/:uid/referral-reset', async (req, res) => {
+  try {
+    const db = getAdminFirestore();
+    await db.collection('users').doc(req.params.uid).update({
+      hasCompletedReferral: false,
+      referrals: admin.firestore.FieldValue.delete(),
+      referralFoundMyself: admin.firestore.FieldValue.delete(),
+      referralCompletedAt: admin.firestore.FieldValue.delete(),
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[Admin] referral-reset:', err);
+    res.status(500).json({ error: 'Failed to reset referral state' });
   }
 });
 

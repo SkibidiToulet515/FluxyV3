@@ -1,0 +1,177 @@
+/* Premium dark glass modal — shared by giveaway + referral flows */
+
+.fluxy-glass-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  animation: fluxyGlassIn 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes fluxyGlassIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fluxy-glass-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 10, 18, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.fluxy-glass-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  padding: 2.25rem 1.75rem 1.75rem;
+  border-radius: 22px;
+  background: rgba(11, 14, 20, 0.88);
+  border: 1px solid rgba(0, 163, 255, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(0, 200, 255, 0.08) inset,
+    0 24px 80px rgba(0, 0, 0, 0.55),
+    0 0 40px rgba(0, 163, 255, 0.12);
+  animation: fluxyGlassCard 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes fluxyGlassCard {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.fluxy-glass-modal-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 1rem;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.35), rgba(168, 85, 247, 0.3));
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
+}
+
+.fluxy-glass-modal-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  text-align: center;
+  margin: 0 0 0.65rem;
+  color: #ffffff;
+  line-height: 1.25;
+}
+
+.fluxy-glass-modal-subtitle {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  text-align: center;
+  color: #a0aec0;
+  margin: 0 0 1.25rem;
+}
+
+.fluxy-glass-modal-body {
+  margin-bottom: 1.25rem;
+}
+
+.fluxy-glass-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.fluxy-glass-modal-btn-primary {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: none;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(180deg, #00b4ff 0%, #0088e8 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.2) inset,
+    0 8px 28px rgba(0, 163, 255, 0.35);
+  transition:
+    transform 0.18s ease,
+    filter 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.fluxy-glass-modal-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 12px 32px rgba(0, 163, 255, 0.42);
+}
+
+.fluxy-glass-modal-btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.fluxy-glass-modal-btn-secondary {
+  background: none;
+  border: none;
+  padding: 0.35rem;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.fluxy-glass-modal-btn-secondary:hover {
+  color: #e2e8f0;
+}
+
+.fluxy-glass-modal-footer-extra {
+  margin-top: 0.75rem;
+  font-size: 0.72rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.fluxy-glass-modal-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 0.4rem;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: fluxySpin 0.7s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes fluxySpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .fluxy-glass-modal-card {
+    padding: 1.75rem 1.25rem 1.5rem;
+  }
+  .fluxy-glass-modal-title {
+    font-size: 1.25rem;
+  }
+}

@@ -3,7 +3,7 @@ import { useOutletContext, Navigate } from 'react-router-dom';
 import {
   Users, Gamepad2, Shield, Search, Trash2, Edit3, Plus,
   Ban, ShieldCheck, ShieldAlert, UserCheck, Loader2, X, Check,
-  Eye, EyeOff, Star, AlertTriangle, Crown,
+  Eye, EyeOff, Star, AlertTriangle, Crown, Gift,
 } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -20,6 +20,7 @@ import { roleTierFromDefinition, tierRank } from '../lib/rbacClient';
 import { normalizeFirestoreGameUrlInput } from '../utils/gamePlayUrl';
 import { SUBJECT_KEYS } from '../config/subjects';
 import Header from '../components/Header';
+import GiveawaysAdminTab from './admin/GiveawaysAdminTab';
 import './AdminPanel.css';
 
 const ROLE_ICONS = { admin: ShieldAlert, mod: ShieldCheck, user: UserCheck, owner: Crown };
@@ -57,11 +58,15 @@ export default function AdminPanel() {
         <button className={`admin-tab ${tab === 'roles' ? 'active' : ''}`} onClick={() => setTab('roles')}>
           <Shield size={16} /> Roles
         </button>
+        <button className={`admin-tab ${tab === 'giveaways' ? 'active' : ''}`} onClick={() => setTab('giveaways')}>
+          <Gift size={16} /> Giveaways
+        </button>
       </div>
 
       {tab === 'users' && <UserManagement />}
       {tab === 'games' && <GameManagement />}
       {tab === 'roles' && <RoleManagement />}
+      {tab === 'giveaways' && <GiveawaysAdminTab />}
     </div>
   );
 }

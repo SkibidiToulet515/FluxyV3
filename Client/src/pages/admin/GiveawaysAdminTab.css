@@ -1,0 +1,61 @@
+.admin-giveaway-page .giveaway-admin-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.65rem 1rem;
+}
+.admin-giveaway-page .giveaway-admin-form .span-2 {
+  grid-column: span 2;
+}
+@media (max-width: 640px) {
+  .admin-giveaway-page .giveaway-admin-form .span-2 {
+    grid-column: span 1;
+  }
+}
+.admin-giveaway-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.admin-inline-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.admin-inline-row input {
+  min-width: 220px;
+  flex: 1;
+}
+.admin-gw-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: flex-end;
+}
+.admin-gw-entries {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+}
+.admin-gw-entries-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.admin-gw-entry-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.admin-gw-entry-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+}

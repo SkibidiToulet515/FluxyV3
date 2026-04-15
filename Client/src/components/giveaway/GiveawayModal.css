@@ -1,0 +1,71 @@
+.giveaway-modal-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.giveaway-modal-long {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: #a0aec0;
+  max-height: 120px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.giveaway-modal-prize {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+  margin: 0;
+}
+
+.giveaway-modal-prize-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.giveaway-modal-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.giveaway-modal-check.subtle {
+  color: #94a3b8;
+  font-size: 0.76rem;
+}
+
+.giveaway-modal-check input {
+  margin-top: 2px;
+  accent-color: #00b4ff;
+}
+
+.giveaway-modal-error {
+  font-size: 0.78rem;
+  color: #f87171;
+  margin: 0;
+}
+
+.giveaway-modal-msg {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin: 0;
+  text-align: center;
+}
+
+.giveaway-modal-msg.muted {
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.giveaway-modal-footer-hint {
+  display: block;
+  text-align: center;
+}

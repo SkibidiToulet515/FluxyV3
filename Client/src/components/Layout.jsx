@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Taskbar from './Taskbar';
 import ReferralOnboarding from './ReferralOnboarding';
+import GiveawayModal from './giveaway/GiveawayModal';
 import { useAuth } from '../utils/AuthContext';
 import { getLayoutMode } from '../utils/api';
 import './Layout.css';
@@ -24,6 +25,7 @@ export default function Layout() {
   return (
     <div className={`layout ${isSidebar ? 'layout-sidebar' : 'layout-taskbar'}`}>
       {showReferralOnboarding && <ReferralOnboarding />}
+      {!showReferralOnboarding && <GiveawayModal />}
       {isSidebar ? (
         <Sidebar
           collapsed={!sidebarOpen}

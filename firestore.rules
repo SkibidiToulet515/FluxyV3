@@ -353,5 +353,14 @@ service cloud.firestore {
       allow create, update: if hasPerm('manage_games');
       allow delete: if isAdmin();
     }
+
+    // Giveaways + entries — all writes via Cloud API (Admin SDK)
+    match /giveaways/{giveawayId} {
+      allow read: if isAuth();
+      allow create, update, delete: if false;
+    }
+    match /giveawayEntries/{entryId} {
+      allow read, write: if false;
+    }
   }
 }
