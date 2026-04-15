@@ -1,7 +1,7 @@
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import {
   Home, Gamepad2, Globe, MessageCircle, Settings,
-  ChevronLeft, ChevronRight, LogOut, Circle, ShieldAlert, ShieldCheck,
+  ChevronLeft, ChevronRight, LogOut, Circle, ShieldAlert, ShieldCheck, Gavel,
 } from 'lucide-react';
 import { useAuth } from '../utils/AuthContext';
 import { isGamesSectionPath, isProxySectionPath } from '../config/subjects';
@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   },
   { to: '/chat', icon: MessageCircle, label: 'Chat', match: (p) => p === '/chat' },
   { to: '/settings', icon: Settings, label: 'Settings', match: (p) => p === '/settings' },
+  { to: '/moderation', icon: Gavel, label: 'Moderation', match: (p) => p === '/moderation' },
 ];
 
 const STATUS_COLORS = {

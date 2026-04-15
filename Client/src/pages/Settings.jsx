@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, Link } from 'react-router-dom';
 import {
   Palette, Layout, User, Circle, Check, Zap, Shield, Wifi, Camera, Loader2,
-  ShieldCheck, Flag, Paintbrush, Image, Sparkles, MousePointer, Download,
+  ShieldCheck, Flag, Paintbrush, Image, Sparkles, MousePointer, Download, Gavel, Bell,
   Upload, Trash2, ToggleLeft, ToggleRight, Eye, Cpu,
 } from 'lucide-react';
 import { useTheme } from '../themes/ThemeContext';
@@ -23,6 +23,7 @@ import {
   getPerformanceProfile,
   detectTierFromDevice,
   PERFORMANCE_TIER_LABELS,
+  PERFORMANCE_PRESET_LABELS,
 } from '../utils/performanceProfile';
 import ThemeMaker from '../components/ThemeMaker';
 import Header from '../components/Header';
@@ -50,6 +51,7 @@ export default function Settings() {
   const [cursorEnabled, setCursorEnabled] = useState(() => localStorage.getItem('fluxy-custom-cursor') !== 'false');
   const [clickEnabled, setClickEnabled] = useState(() => localStorage.getItem('fluxy-click-effect') !== 'false');
   const [perfPreset, setPerfPreset] = useState(() => getPerformancePreset());
+  const [inbox, setInbox] = useState([]);
 
   const perfSnapshot = useMemo(() => {
     const preset = getPerformancePreset();
@@ -69,6 +71,21 @@ export default function Settings() {
       const result = await checkProviderHealth(p.id);
       setProviderHealth((prev) => ({ ...prev, [p.id]: result }));
     });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await apiJson('/api/notifications/me');
+        if (!cancelled) setInbox(data.notifications || []);
+      } catch {
+        if (!cancelled) setInbox([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function handleLayoutChange(mode) {
@@ -97,12 +114,8 @@ export default function Settings() {
   }
 
   function applyPerformancePreset(mode) {
-    if (mode === 'auto') {
-      localStorage.removeItem(FLUXY_PERFORMANCE_KEY);
-    } else {
-      localStorage.setItem(FLUXY_PERFORMANCE_KEY, mode);
-    }
-    setPerfPreset(mode === 'auto' ? 'auto' : mode);
+    localStorage.setItem(FLUXY_PERFORMANCE_KEY, mode);
+    setPerfPreset(mode);
     window.location.reload();
   }
 
@@ -170,34 +183,38 @@ export default function Settings() {
             <div>
               <strong>Graphics performance</strong>
               <p>
-                <strong>Auto</strong> chooses a tier from this device (CPU, memory when available, save-data, and
-                reduced-motion). You can override anytime; the page reloads to apply.
+                Default is <strong>Best visuals</strong>. Choose <strong>Detected</strong> to let Fluxy pick a tier
+                from this device (CPU, memory, save-data, reduced-motion), or <strong>Lower graphics</strong> for
+                minimum effects. The page reloads when you change this.
               </p>
             </div>
           </div>
           <div className="settings-perf-status" role="status">
-            {perfSnapshot.preset === 'auto' && (
+            {perfSnapshot.preset === 'best' && (
               <p>
-                <span className="settings-perf-badge">Auto</span>
-                Active profile: <strong>{perfSnapshot.effectiveLabel}</strong> — chosen automatically for this
-                device. Use the buttons below if you want to force a different look.
+                <span className="settings-perf-badge settings-perf-badge--manual">{PERFORMANCE_PRESET_LABELS.best}</span>
+                Full quality effects.{' '}
+                <span className="settings-perf-hint">
+                  With <strong>{PERFORMANCE_PRESET_LABELS.detected}</strong>, this device would use{' '}
+                  <strong>{perfSnapshot.detectedLabel}</strong>.
+                </span>
+              </p>
+            )}
+            {perfSnapshot.preset === 'detected' && (
+              <p>
+                <span className="settings-perf-badge">{PERFORMANCE_PRESET_LABELS.detected}</span>
+                Active profile: <strong>{perfSnapshot.effectiveLabel}</strong> — chosen from this device. Switch to{' '}
+                <strong>{PERFORMANCE_PRESET_LABELS.best}</strong> or <strong>{PERFORMANCE_PRESET_LABELS.low}</strong>{' '}
+                anytime.
               </p>
             )}
             {perfSnapshot.preset === 'low' && (
               <p>
-                <span className="settings-perf-badge settings-perf-badge--manual">Your choice</span>
+                <span className="settings-perf-badge settings-perf-badge--manual">{PERFORMANCE_PRESET_LABELS.low}</span>
                 Locked to <strong>{perfSnapshot.effectiveLabel}</strong>.{' '}
                 <span className="settings-perf-hint">
-                  With <strong>Auto</strong>, this device would use {perfSnapshot.detectedLabel}.
-                </span>
-              </p>
-            )}
-            {perfSnapshot.preset === 'high' && (
-              <p>
-                <span className="settings-perf-badge settings-perf-badge--manual">Your choice</span>
-                Locked to <strong>{perfSnapshot.effectiveLabel}</strong>.{' '}
-                <span className="settings-perf-hint">
-                  With <strong>Auto</strong>, this device would use {perfSnapshot.detectedLabel}.
+                  With <strong>{PERFORMANCE_PRESET_LABELS.detected}</strong>, this device would use{' '}
+                  <strong>{perfSnapshot.detectedLabel}</strong>.
                 </span>
               </p>
             )}
@@ -205,24 +222,24 @@ export default function Settings() {
           <div className="settings-perf-buttons">
             <button
               type="button"
-              className={`btn btn-secondary ${perfPreset === 'auto' ? 'active' : ''}`}
-              onClick={() => applyPerformancePreset('auto')}
+              className={`btn btn-secondary ${perfPreset === 'best' ? 'active' : ''}`}
+              onClick={() => applyPerformancePreset('best')}
             >
-              Auto (detect)
+              {PERFORMANCE_PRESET_LABELS.best}
+            </button>
+            <button
+              type="button"
+              className={`btn btn-secondary ${perfPreset === 'detected' ? 'active' : ''}`}
+              onClick={() => applyPerformancePreset('detected')}
+            >
+              {PERFORMANCE_PRESET_LABELS.detected}
             </button>
             <button
               type="button"
               className={`btn btn-secondary ${perfPreset === 'low' ? 'active' : ''}`}
               onClick={() => applyPerformancePreset('low')}
             >
-              Lower graphics
-            </button>
-            <button
-              type="button"
-              className={`btn btn-secondary ${perfPreset === 'high' ? 'active' : ''}`}
-              onClick={() => applyPerformancePreset('high')}
-            >
-              Best visuals
+              {PERFORMANCE_PRESET_LABELS.low}
             </button>
           </div>
         </div>
@@ -344,6 +361,40 @@ export default function Settings() {
               </button>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* --- Appeals & notifications --- */}
+      {account && (
+        <section className="settings-section glass-card">
+          <div className="settings-section-header">
+            <Bell size={20} />
+            <div>
+              <h3>Appeals & notifications</h3>
+              <p>Moderation messages and appeal updates</p>
+            </div>
+          </div>
+          <p className="settings-muted" style={{ marginBottom: '0.75rem' }}>
+            <Link to="/moderation" className="settings-inline-link">
+              <Gavel size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+              Open moderation & appeals
+            </Link>
+          </p>
+          {inbox.length === 0 ? (
+            <p className="settings-muted">No notifications yet.</p>
+          ) : (
+            <ul className="settings-notif-list">
+              {inbox.slice(0, 12).map((n) => (
+                <li key={n.id} className={n.read ? '' : 'settings-notif-unread'}>
+                  <strong>{n.title}</strong>
+                  <span className="settings-muted">{n.body}</span>
+                  <span className="settings-muted" style={{ fontSize: '0.75rem' }}>
+                    {n.createdAt ? new Date(n.createdAt).toLocaleString() : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 

@@ -3,6 +3,13 @@ import admin from 'firebase-admin';
 import { requireAuth, requirePermission } from '../middleware/auth.js';
 import { getAdminFirestore, isFirebaseAdminReady } from '../config/firebase.js';
 import { assertCanModifyTargetUser, roleDocTier, OWNER_ROLE_KEY } from '../lib/rbac.js';
+import {
+  createWarningPunishment,
+  createMutePunishment,
+  clearMutePunishment,
+  createBanPunishment,
+  clearBanPunishment,
+} from '../lib/moderationPunishments.js';
 
 const router = express.Router();
 
@@ -73,14 +80,7 @@ router.post('/users/:uid/warn', requirePermission('manage_users'), async (req, r
   try {
     const db = getAdminFirestore();
     await assertCanModifyTargetUser(db, req.uid, uid);
-    const entry = {
-      at: new Date().toISOString(),
-      reason,
-      by: req.uid,
-    };
-    await db.collection('users').doc(uid).update({
-      warnings: admin.firestore.FieldValue.arrayUnion(entry),
-    });
+    await createWarningPunishment(db, { targetUid: uid, issuedBy: req.uid, reason });
     await writeLog(req.uid, 'warn', { reason }, uid);
     res.json({ ok: true });
   } catch (err) {
@@ -97,14 +97,18 @@ router.post('/users/:uid/mute', requirePermission('manage_users'), async (req, r
   const { uid } = req.params;
   if (uid === req.uid) return res.status(400).json({ error: 'Cannot mute yourself' });
   const minutes = Math.min(Math.max(Number(req.body?.minutes) || 60, 1), 10080);
+  const reason = (req.body?.reason || '').toString().slice(0, 500);
   try {
     const db = getAdminFirestore();
     await assertCanModifyTargetUser(db, req.uid, uid);
     const until = new Date(Date.now() + minutes * 60 * 1000);
-    await db.collection('users').doc(uid).update({
-      mutedUntil: admin.firestore.Timestamp.fromDate(until),
+    await createMutePunishment(db, {
+      targetUid: uid,
+      issuedBy: req.uid,
+      reason,
+      until,
     });
-    await writeLog(req.uid, 'mute', { minutes, until: until.toISOString() }, uid);
+    await writeLog(req.uid, 'mute', { minutes, until: until.toISOString(), reason }, uid);
     res.json({ ok: true, until: until.toISOString() });
   } catch (err) {
     if (err.code === 'TARGET_OWNER_PROTECTED') {
@@ -121,9 +125,7 @@ router.post('/users/:uid/unmute', requirePermission('manage_users'), async (req,
   try {
     const db = getAdminFirestore();
     await assertCanModifyTargetUser(db, req.uid, uid);
-    await db.collection('users').doc(uid).update({
-      mutedUntil: admin.firestore.FieldValue.delete(),
-    });
+    await clearMutePunishment(db, uid);
     await writeLog(req.uid, 'unmute', {}, uid);
     res.json({ ok: true });
   } catch (err) {
@@ -139,11 +141,12 @@ router.post('/users/:uid/ban', requirePermission('ban_users'), async (req, res) 
   if (!dbReady(res)) return;
   const { uid } = req.params;
   if (uid === req.uid) return res.status(400).json({ error: 'Cannot ban yourself' });
+  const reason = (req.body?.reason || '').toString().slice(0, 500);
   try {
     const db = getAdminFirestore();
     await assertCanModifyTargetUser(db, req.uid, uid);
-    await db.collection('users').doc(uid).update({ banned: true });
-    await writeLog(req.uid, 'ban', {}, uid);
+    await createBanPunishment(db, { targetUid: uid, issuedBy: req.uid, reason });
+    await writeLog(req.uid, 'ban', { reason }, uid);
     res.json({ ok: true });
   } catch (err) {
     if (err.code === 'TARGET_OWNER_PROTECTED') {
@@ -160,7 +163,7 @@ router.post('/users/:uid/unban', requirePermission('ban_users'), async (req, res
   try {
     const db = getAdminFirestore();
     await assertCanModifyTargetUser(db, req.uid, uid);
-    await db.collection('users').doc(uid).update({ banned: false });
+    await clearBanPunishment(db, uid);
     await writeLog(req.uid, 'unban', {}, uid);
     res.json({ ok: true });
   } catch (err) {

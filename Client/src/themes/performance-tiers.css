@@ -1,6 +1,6 @@
 /* =============================================================================
    Visual cost reduction for data-fluxy-perf="lite" | "balanced"
-   (set from utils/performanceProfile.js — auto or Settings override)
+   (set from utils/performanceProfile.js — best / detected / low)
    ============================================================================= */
 
 html[data-fluxy-perf='lite'] .fluxy-text-shimmer,

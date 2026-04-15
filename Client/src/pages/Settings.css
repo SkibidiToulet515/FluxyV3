@@ -3,6 +3,43 @@
   margin: 0 auto;
 }
 
+.settings-muted {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.settings-inline-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.settings-inline-link:hover {
+  text-decoration: underline;
+}
+
+.settings-notif-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.settings-notif-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.settings-notif-unread {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
 /* --- Section card --- */
 .settings-section {
   padding: 1.5rem;

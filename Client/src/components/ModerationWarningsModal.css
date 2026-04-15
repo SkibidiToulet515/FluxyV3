@@ -1,0 +1,33 @@
+.mod-warnings-modal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: min(40vh, 280px);
+  overflow-y: auto;
+  text-align: left;
+}
+
+.mod-warnings-modal-item {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.mod-warnings-modal-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.mod-warnings-modal-time {
+  display: block;
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-bottom: 0.35rem;
+}
+
+.mod-warnings-modal-reason {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #cbd5e1;
+  white-space: pre-wrap;
+}

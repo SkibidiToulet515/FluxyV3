@@ -8,6 +8,7 @@ import NeuralParticles from './components/NeuralParticles';
 import ScrollProgressBar from './components/ScrollProgressBar';
 import CustomCursor from './components/CustomCursor';
 import LoadingScreen from './components/LoadingScreen';
+import BannedGate from './components/BannedGate';
 import Home from './pages/Home';
 import SubjectPage from './pages/SubjectPage';
 import Proxy from './pages/Proxy';
@@ -17,6 +18,8 @@ import GamePlayer from './pages/GamePlayer';
 import Login from './pages/Login';
 import AdminPanel from './pages/AdminPanel';
 import ModeratorPanel from './pages/ModeratorPanel';
+import AppealPage from './pages/AppealPage';
+import ModerationAccountPage from './pages/ModerationAccountPage';
 import ToolRouteHost from './pages/ToolRouteHost';
 import { useAuth } from './utils/AuthContext';
 import useGlobalClickEffects from './utils/useGlobalClickEffects';
@@ -58,10 +61,11 @@ function AppShell() {
       <CustomCursor enabled={cursorEnabled} showGlow={perf.cursorGlow} />
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/chat" element={<RequireAuth><Chat /></RequireAuth>} />
+        <Route path="/appeal" element={<RequireAuth><AppealPage /></RequireAuth>} />
+        <Route path="/chat" element={<RequireAuth><BannedGate><Chat /></BannedGate></RequireAuth>} />
         <Route path="/games/:gameId" element={<GamePlayer />} />
         <Route path="/play/:gameId" element={<GamePlayer />} />
-        <Route element={<RequireAuth><Layout /></RequireAuth>}>
+        <Route element={<RequireAuth><BannedGate><Layout /></BannedGate></RequireAuth>}>
           <Route path="/" element={<Home />} />
           <Route path="/games" element={<Navigate to="/math" replace />} />
           <Route path="/history" element={<Proxy />} />
@@ -69,6 +73,7 @@ function AppShell() {
           <Route path="/math" element={<SubjectPage />} />
           <Route path="/tools/:toolId" element={<ToolRouteHost />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/moderation" element={<ModerationAccountPage />} />
           <Route path="/moderator" element={<ModeratorPanel />} />
           <Route path="/admin" element={<AdminPanel />} />
         </Route>

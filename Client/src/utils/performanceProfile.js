@@ -1,22 +1,22 @@
 /**
- * Fluxy performance: auto-detect by default; override in Settings (Effects).
- * localStorage `fluxy-performance`: omit key = Auto | `low` | `high` (value `auto` is treated as Auto)
+ * Fluxy graphics: default = Best visuals (full). Optional "Detected" uses device signals.
+ * localStorage `fluxy-performance`: `best` | `detected` | `low` (legacy: auto→detected, high→best)
  */
 
 export const FLUXY_PERFORMANCE_KEY = 'fluxy-performance';
 
-/** @returns {'auto' | 'low' | 'high'} What the user chose in Settings (not the resolved tier). */
+/** @returns {'best' | 'detected' | 'low'} User choice in Settings. */
 export function getPerformancePreset() {
-  if (typeof window === 'undefined') return 'auto';
+  if (typeof window === 'undefined') return 'best';
   const raw = localStorage.getItem(FLUXY_PERFORMANCE_KEY);
   if (raw === 'low') return 'low';
-  if (raw === 'high') return 'high';
-  /* absent, 'auto', or unknown → follow device */
-  return 'auto';
+  if (raw === 'detected' || raw === 'auto') return 'detected';
+  if (raw === 'best' || raw === 'high') return 'best';
+  return 'best';
 }
 
 /**
- * Tier if preset is Auto (ignores low/high). Use in Settings to show "Auto would pick…".
+ * Tier when preset is Detected (for Settings hint text).
  * @returns {'lite' | 'balanced' | 'full'}
  */
 export function detectTierFromDevice() {
@@ -47,7 +47,7 @@ export function detectTierFromDevice() {
 /**
  * @returns {{
  *   tier: 'lite' | 'balanced' | 'full',
- *   preset: 'auto' | 'low' | 'high',
+ *   preset: 'best' | 'detected' | 'low',
  *   filmGrain: boolean,
  *   aurora: 'animated' | 'static',
  *   neuralDots: number,
@@ -65,12 +65,12 @@ export function getPerformanceProfile() {
   if (preset === 'low') {
     return { ...makeProfile('lite'), preset };
   }
-  if (preset === 'high') {
+  if (preset === 'best') {
     return { ...makeProfile('full'), preset };
   }
 
   const tier = detectTierFromDevice();
-  return { ...makeProfile(tier), preset: 'auto' };
+  return { ...makeProfile(tier), preset: 'detected' };
 }
 
 function makeProfile(tier) {
@@ -116,9 +116,16 @@ function makeProfile(tier) {
   };
 }
 
-/** Short labels for Settings / UI */
+/** Short labels for resolved tier */
 export const PERFORMANCE_TIER_LABELS = {
   lite: 'Lower graphics',
   balanced: 'Balanced',
-  full: 'Full visuals',
+  full: 'Best visuals',
+};
+
+/** Labels for the three preset buttons */
+export const PERFORMANCE_PRESET_LABELS = {
+  best: 'Best visuals',
+  detected: 'Detected',
+  low: 'Lower graphics',
 };

@@ -115,10 +115,10 @@ export function AuthProvider({ children }) {
     const cred = await signInWithEmailAndPassword(auth, email, password);
     const userDoc = await getUserDoc(cred.user.uid);
     if (userDoc?.banned) {
-      await signOut(auth);
-      throw new Error('This account has been banned.');
+      /* Allow session so the user can open /appeal; BannedGate blocks the rest of the app. */
+    } else {
+      await updateUserDoc(cred.user.uid, { status: 'online' });
     }
-    await updateUserDoc(cred.user.uid, { status: 'online' });
     return cred.user;
   }, []);
 
@@ -204,6 +204,7 @@ export function AuthProvider({ children }) {
       chatRestricted: profile.chatRestricted === true,
       /** Referral onboarding: show modal only when explicitly false (new signups). */
       needsReferralOnboarding: profile.hasCompletedReferral === false,
+      isBanned: profile.banned === true,
     } : null,
   };
 

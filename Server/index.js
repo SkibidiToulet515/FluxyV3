@@ -19,6 +19,8 @@ import authResolveRouter from './routes/authResolve.js';
 import exportRouter from './routes/export.js';
 import onboardingRouter from './routes/onboarding.js';
 import giveawaysRouter from './routes/giveaways.js';
+import appealsRouter from './routes/appeals.js';
+import notificationsRouter from './routes/notifications.js';
 import { initFirebase, ensureDefaultRoleDefinitions } from './config/firebase.js';
 import { UGS_DIR } from './config/paths.js';
 import { ugsLfsGuard } from './middleware/ugsLfsGuard.js';
@@ -85,6 +87,8 @@ app.use('/api/roles', rolesRouter);
 app.use('/api', exportRouter);
 app.use('/api', onboardingRouter);
 app.use('/api', giveawaysRouter);
+app.use('/api/appeals', appealsRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // --- Serve built frontend in production ---
 if (process.env.NODE_ENV === 'production') {

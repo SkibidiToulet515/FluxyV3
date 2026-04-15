@@ -1,5 +1,10 @@
 /* Premium dark glass modal — shared by giveaway + referral flows */
 
+/* Above default glass modals (e.g. giveaway) so urgent notices stay on top */
+.fluxy-glass-modal-overlay.fluxy-glass-modal--layer-top {
+  z-index: 10058;
+}
+
 .fluxy-glass-modal-overlay {
   position: fixed;
   inset: 0;

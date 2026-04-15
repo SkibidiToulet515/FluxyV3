@@ -103,9 +103,22 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ─── Punishments & appeals (API / Admin SDK only) ─────────────────
+    match /punishments/{pid} {
+      allow read, write: if false;
+    }
+    match /appeals/{aid} {
+      allow read, write: if false;
+    }
+
     // ─── Users ────────────────────────────────────────────────────────
     match /users/{uid} {
       allow read: if isAuth();
+
+      match /notifications/{nid} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+      }
       allow create: if isOwner(uid)
         && request.resource.data.role == 'user';
 

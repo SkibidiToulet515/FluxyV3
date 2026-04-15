@@ -255,7 +255,10 @@ export default function GiveawaysAdminTab() {
           <Gift size={20} />
           <div>
             <h3>Create giveaway</h3>
-            <p>Draft → publish. One published giveaway is shown to users at a time.</p>
+            <p>
+              Draft → publish. One published giveaway is shown at a time. Logged-in users see it as the same
+              centered glass popup used elsewhere (after referral onboarding, if that modal applies).
+            </p>
           </div>
         </div>
         {msg && <p className="admin-error-banner">{msg}</p>}

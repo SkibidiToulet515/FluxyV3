@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import { requireAuth, requirePermission } from '../middleware/auth.js';
 import { getAdminFirestore } from '../config/firebase.js';
 import { assertCanAssignUserRole, assertCanModifyTargetUser } from '../lib/rbac.js';
+import { createBanPunishment, clearBanPunishment } from '../lib/moderationPunishments.js';
 
 const router = express.Router();
 
@@ -44,10 +45,11 @@ router.post('/users/:uid/role', async (req, res) => {
 });
 
 router.post('/users/:uid/ban', requirePermission('ban_users'), async (req, res) => {
+  const reason = (req.body?.reason || '').toString().slice(0, 500);
   try {
     const db = getAdminFirestore();
     await assertCanModifyTargetUser(db, req.uid, req.params.uid, { forBan: true });
-    await db.collection('users').doc(req.params.uid).update({ banned: true });
+    await createBanPunishment(db, { targetUid: req.params.uid, issuedBy: req.uid, reason });
     res.json({ ok: true });
   } catch (err) {
     if (err.code === 'TARGET_OWNER_PROTECTED') {
@@ -79,7 +81,7 @@ router.post('/users/:uid/unban', requirePermission('ban_users'), async (req, res
   try {
     const db = getAdminFirestore();
     await assertCanModifyTargetUser(db, req.uid, req.params.uid, { forBan: true });
-    await db.collection('users').doc(req.params.uid).update({ banned: false });
+    await clearBanPunishment(getAdminFirestore(), req.params.uid);
     res.json({ ok: true });
   } catch (err) {
     if (err.code === 'TARGET_OWNER_PROTECTED') {

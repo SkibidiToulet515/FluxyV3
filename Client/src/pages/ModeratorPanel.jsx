@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useOutletContext, Navigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Flag, ScrollText, Shield, Gamepad2,
-  Search, Loader2, Check, Ban, Mic, Lock, Unlock,
+  Search, Loader2, Check, Ban, Mic, Lock, Unlock, Gavel,
 } from 'lucide-react';
 import { useAuth } from '../utils/AuthContext';
 import { apiJson } from '../services/apiClient';
@@ -10,6 +10,7 @@ import { PERMISSION_KEYS, PERMISSION_LABELS } from '../utils/permissions';
 import { OWNER_ROLE_KEY } from '../lib/rbacClient';
 import Header from '../components/Header';
 import { GameManagement } from './AdminPanel';
+import AppealsStaffPanel from '../components/appeals/AppealsStaffPanel';
 import './ModeratorPanel.css';
 
 function formatTime(ts) {
@@ -45,6 +46,9 @@ export default function ModeratorPanel() {
         <button type="button" className={`admin-tab ${tab === 'users' ? 'active' : ''}`} onClick={() => setTab('users')}>
           <Users size={16} /> Users
         </button>
+        <button type="button" className={`admin-tab ${tab === 'appeals' ? 'active' : ''}`} onClick={() => setTab('appeals')}>
+          <Gavel size={16} /> Appeals
+        </button>
         <button type="button" className={`admin-tab ${tab === 'reports' ? 'active' : ''}`} onClick={() => setTab('reports')}>
           <Flag size={16} /> Reports
         </button>
@@ -63,6 +67,7 @@ export default function ModeratorPanel() {
 
       {tab === 'overview' && <ModOverview />}
       {tab === 'users' && <ModUsers />}
+      {tab === 'appeals' && <AppealsStaffPanel />}
       {tab === 'reports' && <ModReports />}
       {tab === 'logs' && <ModLogs />}
       {tab === 'roles' && <ModRolesInfo />}

@@ -1,0 +1,247 @@
+/* Premium glass — matches GlassModal / giveaway */
+
+.appeal-center {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.appeal-hero-card {
+  border-radius: 22px;
+  padding: 1.75rem 1.5rem;
+  background: rgba(11, 14, 20, 0.88);
+  border: 1px solid rgba(0, 163, 255, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(0, 200, 255, 0.08) inset,
+    0 24px 80px rgba(0, 0, 0, 0.55),
+    0 0 40px rgba(0, 163, 255, 0.12);
+  margin-bottom: 1.25rem;
+  animation: appealCardIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes appealCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.appeal-hero-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 1rem;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.35), rgba(168, 85, 247, 0.3));
+  color: #fff;
+}
+
+.appeal-hero-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 0.5rem;
+  color: #fff;
+}
+
+.appeal-hero-sub {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  text-align: center;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.appeal-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+}
+
+.appeal-pill-ban {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fecaca;
+}
+.appeal-pill-mute {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fde68a;
+}
+.appeal-pill-warning {
+  background: rgba(59, 130, 246, 0.15);
+  color: #bfdbfe;
+}
+
+.appeal-punishment-card {
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 0.75rem;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  text-align: left;
+}
+
+.appeal-punishment-card.selected {
+  border-color: rgba(0, 163, 255, 0.55);
+  box-shadow: 0 0 20px rgba(0, 163, 255, 0.12);
+}
+
+.appeal-punishment-meta {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0.35rem 0 0;
+}
+
+.appeal-punishment-reason {
+  font-size: 0.9rem;
+  color: #e2e8f0;
+  margin: 0.5rem 0 0;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.appeal-form label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin: 0.75rem 0 0.35rem;
+}
+
+.appeal-form textarea {
+  width: 100%;
+  min-height: 88px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(8, 10, 18, 0.85);
+  color: #f1f5f9;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.appeal-form textarea:focus {
+  outline: none;
+  border-color: rgba(0, 163, 255, 0.55);
+  box-shadow: 0 0 0 2px rgba(0, 163, 255, 0.15);
+}
+
+.appeal-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+}
+
+.appeal-check input {
+  margin-top: 0.2rem;
+}
+
+.appeal-btn-primary {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: none;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(180deg, #00b4ff 0%, #0088e8 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.2) inset,
+    0 8px 28px rgba(0, 163, 255, 0.35);
+}
+
+.appeal-btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.appeal-error {
+  color: #f87171;
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
+}
+
+.appeal-history-item {
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.5rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.appeal-status {
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.appeal-status-pending {
+  color: #fbbf24;
+}
+.appeal-status-under_review {
+  color: #38bdf8;
+}
+.appeal-status-accepted {
+  color: #4ade80;
+}
+.appeal-status-denied {
+  color: #f87171;
+}
+.appeal-status-modified {
+  color: #a78bfa;
+}
+
+.appeal-banned-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 520px;
+  margin: 0 auto 1rem;
+  padding: 0 0.5rem;
+}
+
+.appeal-banned-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #e2e8f0;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.appeal-banned-logout {
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #e2e8f0;
+  border-radius: 10px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.appeal-banned-backdrop {
+  min-height: 100vh;
+  padding: 1.5rem 0 2rem;
+  background: radial-gradient(ellipse at top, rgba(15, 23, 42, 0.5), transparent 55%),
+    rgba(6, 8, 14, 0.92);
+}
