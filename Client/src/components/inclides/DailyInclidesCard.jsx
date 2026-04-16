@@ -1,32 +1,36 @@
 import { useState } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { useInclides } from '../../contexts/InclidesContext';
-import { formatInclidesAmount, formatInclidesLine } from '../../services/inclidesApi';
+import { formatInclidesAmount, formatInclidesLine, postDailyClaim } from '../../services/inclidesApi';
 import InclidesSymbol from './InclidesSymbol';
 import './DailyInclidesCard.css';
 
 export default function DailyInclidesCard() {
   const {
-    canClaimToday,
     previewNextReward,
     streak,
-    claimDaily,
+    refresh,
   } = useInclides();
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState(null);
+  const [exiting, setExiting] = useState(false);
 
   async function onClaim() {
-    if (!canClaimToday || busy) return;
+    if (busy) return;
     setBusy(true);
     setToast(null);
     try {
-      const out = await claimDaily();
+      const out = await postDailyClaim();
       const amt = formatInclidesAmount(out.earned);
       setToast(
         `You earned ${amt} Inclides!${out.streak >= 2 ? ` 🔥 ${out.streak}-day streak` : ''}`,
       );
-      setTimeout(() => setToast(null), 5200);
+      setExiting(true);
+      setTimeout(() => setToast(null), 4800);
+      await new Promise((r) => setTimeout(r, 420));
+      await refresh();
     } catch (e) {
+      setExiting(false);
       setToast(e.message || 'Could not claim');
       setTimeout(() => setToast(null), 4000);
     } finally {
@@ -37,7 +41,9 @@ export default function DailyInclidesCard() {
   const segments = Array.from({ length: 7 }, (_, i) => i < Math.min(streak, 7));
 
   return (
-    <section className="daily-inclides glass-card fluxy-premium-surface">
+    <section
+      className={`daily-inclides glass-card fluxy-premium-surface${exiting ? ' daily-inclides--exit' : ''}`}
+    >
       <div className="daily-inclides-head">
         <InclidesSymbol size={22} />
         <div>
@@ -53,26 +59,22 @@ export default function DailyInclidesCard() {
         ))}
       </div>
       <p className="daily-inclides-meta">
-        {canClaimToday
-          ? `Next: ${formatInclidesLine(previewNextReward)}`
-          : `Come back tomorrow — current streak ${streak} day${streak === 1 ? '' : 's'}.`}
+        Next: {formatInclidesLine(previewNextReward)}
       </p>
       <button
         type="button"
         className="btn btn-primary daily-inclides-btn"
-        disabled={!canClaimToday || busy}
+        disabled={busy || exiting}
         onClick={onClaim}
       >
         {busy ? (
           <>
             <Loader2 size={16} className="spin" /> Claiming…
           </>
-        ) : canClaimToday ? (
+        ) : (
           <>
             <Sparkles size={16} /> Claim daily Inclides
           </>
-        ) : (
-          'Claimed today'
         )}
       </button>
       {toast ? (

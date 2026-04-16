@@ -1,0 +1,119 @@
+/* Profile cosmetics driven by data-equip-* attributes (Inclides shop item ids). */
+
+.profile-page[data-equip-frames] .profile-avatar-lg {
+  box-shadow:
+    0 0 0 2px rgba(34, 211, 238, 0.35),
+    0 0 36px rgba(34, 211, 238, 0.22);
+}
+
+.profile-page[data-equip-frames='neon-ring-frame'] .profile-avatar-lg {
+  box-shadow:
+    0 0 0 2px rgba(52, 211, 153, 0.45),
+    0 0 40px rgba(16, 185, 129, 0.35);
+}
+
+.profile-page[data-equip-frames='ember-edge-frame'] .profile-avatar-lg {
+  box-shadow:
+    0 0 0 2px rgba(251, 113, 133, 0.5),
+    0 0 42px rgba(239, 68, 68, 0.35);
+}
+
+.profile-page[data-equip-frames='nova-crown-frame'] .profile-avatar-lg,
+.profile-page[data-equip-frames='shadow-core-frame'] .profile-avatar-lg {
+  box-shadow:
+    0 0 0 2px rgba(251, 191, 36, 0.55),
+    0 0 48px rgba(245, 158, 11, 0.38);
+}
+
+.profile-page[data-equip-banners='moonlight-banner'] .profile-banner {
+  background: linear-gradient(115deg, rgba(99, 102, 241, 0.55), rgba(168, 85, 247, 0.4), rgba(236, 72, 153, 0.25));
+}
+
+.profile-page[data-equip-banners='cyber-grid-banner'] .profile-banner {
+  background:
+    linear-gradient(rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.45)),
+    repeating-linear-gradient(90deg, rgba(34, 211, 238, 0.12) 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(0deg, rgba(34, 211, 238, 0.1) 0 1px, transparent 1px 28px),
+    linear-gradient(120deg, rgba(30, 64, 175, 0.5), rgba(8, 47, 73, 0.6));
+}
+
+.profile-page[data-equip-banners='galaxy-bloom-banner'] .profile-banner {
+  background: radial-gradient(circle at 30% 20%, rgba(251, 191, 36, 0.35), transparent 45%),
+    radial-gradient(circle at 80% 60%, rgba(167, 139, 250, 0.45), transparent 50%),
+    linear-gradient(125deg, rgba(15, 23, 42, 0.9), rgba(49, 46, 129, 0.65));
+}
+
+.profile-page[data-equip-profile-backgrounds='deep-space-background'] .profile-banner {
+  background: radial-gradient(circle at 50% 120%, rgba(56, 189, 248, 0.25), transparent 55%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.95), rgba(30, 27, 75, 0.75));
+}
+
+.profile-page[data-equip-profile-backgrounds='cosmic-storm-background'] .profile-banner {
+  background: linear-gradient(135deg, rgba(127, 29, 29, 0.55), rgba(30, 27, 75, 0.75), rgba(14, 116, 144, 0.45));
+  animation: profile-banner-drift 14s ease-in-out infinite alternate;
+}
+
+@keyframes profile-banner-drift {
+  from {
+    filter: hue-rotate(0deg);
+  }
+  to {
+    filter: hue-rotate(18deg);
+  }
+}
+
+.profile-page[data-equip-name-effects='electric-blue-name'] .profile-hero-text h2 {
+  text-shadow: 0 0 18px rgba(59, 130, 246, 0.65);
+}
+
+.profile-page[data-equip-name-effects='void-pulse-name'] .profile-hero-text h2 {
+  text-shadow: 0 0 14px rgba(15, 23, 42, 0.95), 0 0 28px rgba(99, 102, 241, 0.45);
+  animation: profile-name-pulse 3.2s ease-in-out infinite;
+}
+
+@keyframes profile-name-pulse {
+  50% {
+    opacity: 0.92;
+  }
+}
+
+.profile-page[data-equip-badges] .profile-hero-text h2::after {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-left: 10px;
+  border-radius: 4px;
+  vertical-align: middle;
+  background: linear-gradient(135deg, #a78bfa, #22d3ee);
+  box-shadow: 0 0 12px rgba(167, 139, 250, 0.55);
+}
+
+.profile-page[data-equip-badges='elite-badge'] .profile-hero-text h2::after {
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fcd34d, #f472b6);
+}
+
+.profile-page[data-equip-effects] .profile-hero {
+  position: relative;
+}
+
+.profile-page[data-equip-effects] .profile-hero::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 60px rgba(34, 211, 238, 0.08);
+}
+
+.profile-page[data-equip-extras='firefly-particles'] .profile-hero::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(250, 250, 250, 0.35) 0, transparent 2px);
+  background-size: 48px 48px;
+  opacity: 0.2;
+  mix-blend-mode: screen;
+}

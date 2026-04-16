@@ -10,12 +10,9 @@ import { useAuth } from '../utils/AuthContext';
 import { isGamesSectionPath, isProxySectionPath } from '../config/subjects';
 import './Sidebar.css';
 
-const NAV_ITEMS = [
+/** Primary navigation (top group). */
+const NAV_PRIMARY = [
   { to: '/', icon: Home, label: 'Home', match: (p) => p === '/' },
-  { to: '/library', icon: Heart, label: 'Library', match: (p) => p.startsWith('/library') },
-  { to: '/shop', icon: ShoppingBag, label: 'Shop', match: (p) => p.startsWith('/shop') },
-  { to: '/inventory', icon: Package, label: 'Inventory', match: (p) => p.startsWith('/inventory') },
-  { to: '/wallet', icon: Wallet, label: 'Inclides', match: (p) => p.startsWith('/wallet') },
   {
     to: '/games',
     icon: Gamepad2,
@@ -33,12 +30,36 @@ const NAV_ITEMS = [
   { to: '/moderation', icon: Gavel, label: 'Moderation', match: (p) => p === '/moderation' },
 ];
 
+/** Secondary (Inclides & library) — rendered below primary + staff links. */
+const NAV_SECONDARY = [
+  { to: '/library', icon: Heart, label: 'Library', match: (p) => p.startsWith('/library') },
+  { to: '/shop', icon: ShoppingBag, label: 'Shop', match: (p) => p.startsWith('/shop') },
+  { to: '/inventory', icon: Package, label: 'Inventory', match: (p) => p.startsWith('/inventory') },
+  { to: '/wallet', icon: Wallet, label: 'Inclides', match: (p) => p.startsWith('/wallet') },
+];
+
 const STATUS_COLORS = {
   online: '#34d399',
   idle: '#fbbf24',
   dnd: '#ef4444',
   offline: '#71717a',
 };
+
+function NavButton({ to, icon: Icon, label, match, collapsed, end }) {
+  const location = useLocation();
+  const active = match(location.pathname);
+  return (
+    <NavLink
+      to={to}
+      end={end ?? to === '/'}
+      className={() => `sidebar-link ${active ? 'active' : ''}`}
+      title={collapsed ? label : undefined}
+    >
+      <Icon size={20} />
+      <span className="sidebar-label">{label}</span>
+    </NavLink>
+  );
+}
 
 export default function Sidebar({ collapsed, onToggle, account, onLogout }) {
   const { hasPermission } = useAuth();
@@ -78,32 +99,20 @@ export default function Sidebar({ collapsed, onToggle, account, onLogout }) {
           </div>
         </div>
 
-        <nav className="sidebar-nav">
-          {NAV_ITEMS.map(({ to, icon: Icon, label, match }) => {
-            const active = match(location.pathname);
-            return (
-              <NavLink
-                key={to}
-                to={to}
-                end={to === '/'}
-                className={() => `sidebar-link ${active ? 'active' : ''}`}
-                title={collapsed ? label : undefined}
-              >
-                <Icon size={20} />
-                <span className="sidebar-label">{label}</span>
-              </NavLink>
-            );
-          })}
+        <nav className="sidebar-nav" aria-label="Main">
+          {NAV_PRIMARY.map((item) => (
+            <NavButton key={item.to} {...item} collapsed={collapsed} />
+          ))}
           {showMod && (
             <NavLink
               to="/moderator"
               className={({ isActive }) =>
                 `sidebar-link sidebar-link-mod ${isActive ? 'active' : ''}`
               }
-              title={collapsed ? 'Moderator' : undefined}
+              title={collapsed ? 'Moderator Panel' : undefined}
             >
               <ShieldCheck size={20} />
-              <span className="sidebar-label">Moderator</span>
+              <span className="sidebar-label">Moderator Panel</span>
             </NavLink>
           )}
           {showAdmin && (
@@ -112,12 +121,21 @@ export default function Sidebar({ collapsed, onToggle, account, onLogout }) {
               className={({ isActive }) =>
                 `sidebar-link sidebar-link-admin ${isActive ? 'active' : ''}`
               }
-              title={collapsed ? 'Admin' : undefined}
+              title={collapsed ? 'Admin Panel' : undefined}
             >
               <ShieldAlert size={20} />
-              <span className="sidebar-label">Admin</span>
+              <span className="sidebar-label">Admin Panel</span>
             </NavLink>
           )}
+
+          <div className="sidebar-nav-divider" role="presentation" />
+
+          <div className="sidebar-nav-subtle-label" aria-hidden={collapsed}>
+            {!collapsed ? <span>Discover</span> : null}
+          </div>
+          {NAV_SECONDARY.map((item) => (
+            <NavButton key={item.to} {...item} collapsed={collapsed} />
+          ))}
         </nav>
 
         {account && (

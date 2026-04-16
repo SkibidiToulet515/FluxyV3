@@ -10,6 +10,29 @@ const router = express.Router();
 router.use(requireAuth);
 router.use(requirePermission('access_admin_panel'));
 
+/** Prefix search on usernameLower for admin tooling (Inclides grant, etc.). */
+router.get('/users/search', async (req, res) => {
+  try {
+    const q = (req.query.q || '').toString().trim().toLowerCase().slice(0, 32);
+    if (q.length < 2) return res.json({ users: [] });
+    const db = getAdminFirestore();
+    const snap = await db
+      .collection('users')
+      .where('usernameLower', '>=', q)
+      .where('usernameLower', '<=', `${q}\uf8ff`)
+      .limit(12)
+      .get();
+    const users = snap.docs.map((d) => ({
+      uid: d.id,
+      username: d.data().username || '',
+    }));
+    res.json({ users });
+  } catch (err) {
+    console.error('[Admin] user search:', err);
+    res.status(500).json({ error: 'Search failed' });
+  }
+});
+
 router.get('/users', async (req, res) => {
   try {
     const db = getAdminFirestore();

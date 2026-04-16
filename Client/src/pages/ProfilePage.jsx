@@ -1,7 +1,7 @@
 import { useParams, Link, useOutletContext } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  User, Calendar, Gamepad2, Heart, Star, Sparkles, Users, MessageCircle,
+  Calendar, Gamepad2, Heart, Star, Sparkles, Users, MessageCircle,
 } from 'lucide-react';
 import Header from '../components/Header';
 import { useAuth } from '../utils/AuthContext';
@@ -16,12 +16,14 @@ import { useInclides } from '../contexts/InclidesContext';
 import InclidesSymbol from '../components/inclides/InclidesSymbol';
 import { formatInclidesAmount } from '../services/inclidesApi';
 import './ProfilePage.css';
+import './profileCosmetics.css';
 
 export default function ProfilePage() {
   const { username } = useParams();
   const { onMenuToggle } = useOutletContext();
   const { user, account } = useAuth();
   const { favorites, collections } = useLibrary();
+  const { balance: inclidesBalance, equippedSlots: selfSlots } = useInclides();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [friendBusy, setFriendBusy] = useState(false);
@@ -132,10 +134,34 @@ export default function ProfilePage() {
       ? new Date(profile.createdAt).toLocaleDateString()
       : '—';
 
+  const equipAttrs = useMemo(() => {
+    let slots = {};
+    if (isSelf) {
+      slots = selfSlots || {};
+    } else if (profile) {
+      slots = profile.inclidesEquippedSlots && typeof profile.inclidesEquippedSlots === 'object'
+        ? { ...profile.inclidesEquippedSlots }
+        : {};
+      if (!Object.keys(slots).length && profile.inclidesEquippedItemId) {
+        slots.frames = profile.inclidesEquippedItemId;
+      }
+    }
+    const pick = (k) => (slots[k] ? String(slots[k]) : undefined);
+    return {
+      'data-equip-frames': pick('frames'),
+      'data-equip-effects': pick('effects'),
+      'data-equip-banners': pick('banners'),
+      'data-equip-name-effects': pick('name_effects'),
+      'data-equip-badges': pick('badges'),
+      'data-equip-profile-backgrounds': pick('profile_backgrounds'),
+      'data-equip-extras': pick('extras'),
+    };
+  }, [isSelf, selfSlots, profile]);
+
   return (
     <div
       className="profile-page animate-fade-in"
-      data-inclides-flair={isSelf && equippedItemId ? equippedItemId : undefined}
+      {...equipAttrs}
     >
       <Header title={profile?.username || 'Profile'} onMenuClick={onMenuToggle} />
 

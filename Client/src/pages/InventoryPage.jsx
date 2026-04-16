@@ -1,15 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Package, Loader2, Check } from 'lucide-react';
 import Header from '../components/Header';
 import { fetchInclidesShop } from '../services/inclidesApi';
 import { useInclides } from '../contexts/InclidesContext';
 import InclidesSymbol from '../components/inclides/InclidesSymbol';
+import { CATEGORY_ORDER, slotKeyForCategory } from '../lib/inclidesShopUtils';
 import './InventoryPage.css';
 
 export default function InventoryPage() {
   const { onMenuToggle } = useOutletContext();
-  const { ownedItemIds, equippedItemId, equip } = useInclides();
+  const { ownedItemIds, equippedSlots, equip } = useInclides();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(null);
@@ -34,23 +35,48 @@ export default function InventoryPage() {
   const owned = new Set(ownedItemIds);
   const ownedList = items.filter((x) => owned.has(x.id));
 
-  async function onEquip(itemId) {
-    setBusy(itemId);
+  const byCategory = useMemo(() => {
+    const m = {};
+    CATEGORY_ORDER.forEach((c) => {
+      m[c] = [];
+    });
+    ownedList.forEach((item) => {
+      const c = item.category || 'Extras';
+      if (!m[c]) m[c] = [];
+      m[c].push(item);
+    });
+    return m;
+  }, [ownedList]);
+
+  async function onEquip(item) {
+    setBusy(item.id);
     try {
-      await equip(itemId);
+      await equip({ itemId: item.id });
     } finally {
       setBusy(null);
     }
   }
 
-  async function onClear() {
-    setBusy('__clear');
+  async function onClearSlot(category) {
+    const sk = slotKeyForCategory(category);
+    setBusy(`clear-${sk}`);
     try {
-      await equip(null);
+      await equip({ clearSlot: sk });
     } finally {
       setBusy(null);
     }
   }
+
+  async function onClearAll() {
+    setBusy('__all');
+    try {
+      await equip({ clearAll: true });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const hasAny = ownedList.length > 0;
 
   return (
     <div className="inventory-page animate-fade-in">
@@ -60,7 +86,7 @@ export default function InventoryPage() {
         <Package size={26} className="inventory-hero-icon" />
         <div>
           <h2>Your cosmetics</h2>
-          <p>Equip one look at a time. Items stay in your inventory forever.</p>
+          <p>Equip one item per category (frames, effects, banners, and more). Items stay forever.</p>
         </div>
       </section>
 
@@ -68,45 +94,76 @@ export default function InventoryPage() {
         <div className="inventory-loading">
           <Loader2 className="spin" size={22} /> Loading…
         </div>
-      ) : ownedList.length === 0 ? (
+      ) : !hasAny ? (
         <p className="inventory-empty glass-card">
           Nothing here yet — earn Inclides and visit the Shop.
         </p>
       ) : (
-        <ul className="inventory-list">
-          {ownedList.map((item) => {
-            const isEq = equippedItemId === item.id;
-            const b = busy === item.id;
+        <div className="inventory-sections">
+          {CATEGORY_ORDER.map((cat) => {
+            const rows = byCategory[cat] || [];
+            if (!rows.length) return null;
             return (
-              <li key={item.id} className="inventory-row glass-card">
-                <InclidesSymbol size={28} />
-                <div className="inventory-row-text">
-                  <strong>{item.name}</strong>
-                  <span>{item.description}</span>
+              <section key={cat} className="inventory-cat glass-card">
+                <div className="inventory-cat-head">
+                  <h3>{cat}</h3>
+                  {equippedSlots?.[slotKeyForCategory(cat)] ? (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm inventory-clear-slot"
+                      disabled={busy === `clear-${slotKeyForCategory(cat)}`}
+                      onClick={() => onClearSlot(cat)}
+                    >
+                      Clear {cat.toLowerCase()}
+                    </button>
+                  ) : null}
                 </div>
-                {isEq ? (
-                  <span className="inventory-equipped">
-                    <Check size={14} /> Equipped
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    disabled={b}
-                    onClick={() => onEquip(item.id)}
-                  >
-                    {b ? '…' : 'Equip'}
-                  </button>
-                )}
-              </li>
+                <ul className="inventory-list">
+                  {rows.map((item) => {
+                    const sk = slotKeyForCategory(item.category);
+                    const isEq = equippedSlots?.[sk] === item.id;
+                    const b = busy === item.id;
+                    return (
+                      <li key={item.id} className="inventory-row">
+                        <div className={`inventory-visual inv-rarity--${String(item.rarity || 'Common').toLowerCase()}`}>
+                          <InclidesSymbol size={28} />
+                        </div>
+                        <div className="inventory-row-text">
+                          <strong>{item.name}</strong>
+                          <span>{item.description}</span>
+                        </div>
+                        {isEq ? (
+                          <span className="inventory-equipped">
+                            <Check size={14} /> Equipped
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            disabled={b}
+                            onClick={() => onEquip(item)}
+                          >
+                            {b ? '…' : 'Equip'}
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
             );
           })}
-        </ul>
+        </div>
       )}
 
-      {ownedList.length > 0 && equippedItemId ? (
-        <button type="button" className="btn btn-ghost inventory-clear" onClick={onClear} disabled={busy === '__clear'}>
-          Clear equipped look
+      {hasAny ? (
+        <button
+          type="button"
+          className="btn btn-ghost inventory-clear"
+          onClick={onClearAll}
+          disabled={busy === '__all'}
+        >
+          Clear all equipped
         </button>
       ) : null}
     </div>

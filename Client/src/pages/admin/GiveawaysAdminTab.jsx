@@ -38,7 +38,7 @@ export default function GiveawaysAdminTab() {
   const [preview, setPreview] = useState(null);
   const [entries, setEntries] = useState(null);
   const [creating, setCreating] = useState(false);
-  const [resetUid, setResetUid] = useState('');
+  const [resetUsername, setResetUsername] = useState('');
 
   const [form, setForm] = useState({
     title: '',
@@ -236,13 +236,22 @@ export default function GiveawaysAdminTab() {
   }
 
   async function resetReferral() {
-    const uid = resetUid.trim();
-    if (!uid) return;
+    const q = resetUsername.trim();
+    if (!q) return;
     setMsg('');
     try {
-      await apiJson(`/api/admin/users/${encodeURIComponent(uid)}/referral-reset`, { method: 'POST' });
-      setMsg('Referral onboarding reset for user.');
-      setResetUid('');
+      const data = await apiJson(`/api/admin/users/search?q=${encodeURIComponent(q.toLowerCase())}`);
+      const lower = q.toLowerCase();
+      const hit =
+        (data.users || []).find((u) => (u.username || '').toLowerCase() === lower)
+        || (data.users || [])[0];
+      if (!hit?.uid) {
+        setMsg('User not found — pick a username from search or type the full name.');
+        return;
+      }
+      await apiJson(`/api/admin/users/${encodeURIComponent(hit.uid)}/referral-reset`, { method: 'POST' });
+      setMsg(`Referral onboarding reset for ${hit.username || 'user'}.`);
+      setResetUsername('');
     } catch (e) {
       setMsg(e.message || 'Reset failed');
     }
@@ -320,11 +329,11 @@ export default function GiveawaysAdminTab() {
           <Users size={20} />
           <div>
             <h3>Referral onboarding reset</h3>
-            <p>POST /api/admin/users/:uid/referral-reset — user will see the referral modal again.</p>
+            <p>Find by username — user will see the referral modal again.</p>
           </div>
         </div>
         <div className="admin-inline-row">
-          <input value={resetUid} onChange={(e) => setResetUid(e.target.value)} placeholder="User UID" />
+          <input value={resetUsername} onChange={(e) => setResetUsername(e.target.value)} placeholder="Username" />
           <button type="button" className="admin-btn admin-btn-ghost admin-btn-sm" onClick={resetReferral}><RotateCcw size={14} /> Reset</button>
         </div>
       </section>

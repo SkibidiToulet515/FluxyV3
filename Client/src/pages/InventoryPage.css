@@ -1,7 +1,65 @@
 .inventory-page {
-  max-width: 720px;
+  max-width: 840px;
   margin: 0 auto;
   padding-bottom: 3rem;
+}
+
+.inventory-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.inventory-cat {
+  padding: 0;
+  overflow: hidden;
+}
+
+.inventory-cat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.inventory-cat-head h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.inventory-clear-slot {
+  font-size: 0.72rem !important;
+  padding: 4px 10px !important;
+}
+
+.inventory-visual {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.inv-rarity--rare .inclides-symbol {
+  color: #60a5fa;
+}
+
+.inv-rarity--epic .inclides-symbol {
+  color: #a78bfa;
+}
+
+.inv-rarity--legendary .inclides-symbol {
+  color: #fbbf24;
 }
 
 .inventory-hero {

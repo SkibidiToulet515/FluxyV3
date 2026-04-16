@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2, Sparkles, Users, ScrollText } from 'lucide-react';
 import { apiJson } from '../../services/apiClient';
+import UsernameAutocomplete from '../../components/ui/UsernameAutocomplete';
 import './InclidesAdminTab.css';
 
 export default function InclidesAdminTab() {
@@ -10,7 +11,7 @@ export default function InclidesAdminTab() {
   const [msg, setMsg] = useState('');
   const [leaderboard, setLeaderboard] = useState([]);
   const [tx, setTx] = useState([]);
-  const [grantUid, setGrantUid] = useState('');
+  const [grantUsername, setGrantUsername] = useState('');
   const [grantAmt, setGrantAmt] = useState('100');
   const [grantNote, setGrantNote] = useState('');
 
@@ -71,13 +72,13 @@ export default function InclidesAdminTab() {
       await apiJson('/api/inclides/admin/grant', {
         method: 'POST',
         body: {
-          targetUid: grantUid.trim(),
+          targetUsername: grantUsername.trim(),
           amount: parseInt(grantAmt, 10),
           note: grantNote.trim(),
         },
       });
       setMsg('Grant applied.');
-      setGrantUid('');
+      setGrantUsername('');
       setGrantNote('');
       await load();
     } catch (err) {
@@ -182,15 +183,14 @@ export default function InclidesAdminTab() {
           <Users size={20} />
           <div>
             <h3>Grant or remove Inclides</h3>
-            <p>Target user UID. Negative amount removes (won&apos;t go below zero).</p>
+            <p>Search by username. Negative amount removes (won&apos;t go below zero).</p>
           </div>
         </div>
         <form className="inclides-admin-form inclides-admin-grant" onSubmit={doGrant}>
-          <input
-            placeholder="Target UID"
-            value={grantUid}
-            onChange={(e) => setGrantUid(e.target.value)}
-            required
+          <UsernameAutocomplete
+            value={grantUsername}
+            onChange={setGrantUsername}
+            placeholder="Username"
           />
           <input
             type="number"

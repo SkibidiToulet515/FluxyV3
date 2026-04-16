@@ -57,8 +57,8 @@ export function InclidesProvider({ children }) {
   );
 
   const equip = useCallback(
-    async (itemId) => {
-      const out = await postInclidesEquip(itemId);
+    async (payload) => {
+      const out = await postInclidesEquip(payload);
       await refresh();
       return out;
     },
@@ -76,6 +76,7 @@ export function InclidesProvider({ children }) {
       nextStreakIfClaim: data?.nextStreakIfClaim ?? 1,
       ownedItemIds: data?.ownedItemIds ?? [],
       equippedItemId: data?.equippedItemId ?? null,
+      equippedSlots: data?.equippedSlots ?? {},
       refresh,
       claimDaily,
       purchase,

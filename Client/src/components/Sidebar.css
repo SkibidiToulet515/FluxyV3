@@ -114,6 +114,27 @@
   overflow-x: hidden;
 }
 
+.sidebar-nav-divider {
+  height: 1px;
+  margin: 10px 0.5rem 8px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+  flex-shrink: 0;
+}
+
+.sidebar-nav-subtle-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 4px 0.75rem 6px;
+  opacity: 0.85;
+}
+
+.sidebar.collapsed .sidebar-nav-subtle-label {
+  display: none;
+}
+
 .sidebar-link {
   display: flex;
   align-items: center;

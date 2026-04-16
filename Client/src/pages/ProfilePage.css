@@ -198,24 +198,6 @@
   color: #67e8f9;
 }
 
-.profile-page[data-inclides-flair] .profile-avatar-lg {
-  box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.06),
-    0 0 28px rgba(34, 211, 238, 0.3);
-}
-
-.profile-page[data-inclides-flair='nebula-badge'] .profile-hero-text h2::after {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-left: 8px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #a78bfa, #22d3ee);
-  vertical-align: middle;
-  box-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
-}
-
 .skeleton-block {
   min-height: 220px;
   animation: pulse 1.2s ease-in-out infinite;

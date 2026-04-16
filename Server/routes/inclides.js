@@ -6,6 +6,7 @@ import admin from 'firebase-admin';
 import { requireAuth, requirePermission } from '../middleware/auth.js';
 import { getAdminFirestore, isFirebaseAdminReady } from '../config/firebase.js';
 import { notifyUser } from '../lib/userNotifications.js';
+import { INCLIDES_SHOP_ITEMS, slotKeyForItem } from '../lib/inclidesCatalog.js';
 
 const router = express.Router();
 
@@ -17,36 +18,7 @@ const DEFAULT_CONFIG = {
   highTierStreakMin: 8,
   highTierMult: 1.5,
   highTierBonus: 25,
-  shopItems: [
-    {
-      id: 'aurora-ring',
-      name: 'Aurora ring',
-      description: 'A soft gradient ring around your avatar.',
-      price: 280,
-      kind: 'profile_flair',
-    },
-    {
-      id: 'nebula-badge',
-      name: 'Nebula badge',
-      description: 'A compact badge beside your name.',
-      price: 150,
-      kind: 'badge',
-    },
-    {
-      id: 'pulse-trail',
-      name: 'Pulse trail',
-      description: 'Subtle motion accent on your profile hero.',
-      price: 420,
-      kind: 'profile_flair',
-    },
-    {
-      id: 'orbit-dots',
-      name: 'Orbit dots',
-      description: 'Minimal floating dots for your card.',
-      price: 200,
-      kind: 'profile_flair',
-    },
-  ],
+  shopItems: INCLIDES_SHOP_ITEMS,
 };
 
 function utcDayKey(d = new Date()) {
@@ -62,12 +34,47 @@ function yesterdayUtcDayKey() {
 async function getConfig(db) {
   const snap = await db.collection('appConfig').doc('inclides').get();
   const raw = snap.exists ? snap.data() : {};
-  const shopItems = Array.isArray(raw.shopItems) && raw.shopItems.length ? raw.shopItems : DEFAULT_CONFIG.shopItems;
+  const rawItems = raw.shopItems;
+  const shopItems =
+    Array.isArray(rawItems) && rawItems.length >= 10
+      ? rawItems
+      : DEFAULT_CONFIG.shopItems;
   return {
     ...DEFAULT_CONFIG,
     ...raw,
     shopItems,
   };
+}
+
+function normalizeEquippedSlots(u, cfg) {
+  const raw = u.inclidesEquippedSlots && typeof u.inclidesEquippedSlots === 'object'
+    ? { ...u.inclidesEquippedSlots }
+    : {};
+  const legacy = u.inclidesEquippedItemId;
+  if (legacy && typeof legacy === 'string') {
+    const item = (cfg.shopItems || []).find((x) => x.id === legacy);
+    if (item) {
+      const sk = slotKeyForItem(item);
+      if (!raw[sk]) raw[sk] = legacy;
+    }
+  }
+  return raw;
+}
+
+async function resolveTargetUid(db, body) {
+  let targetUid = (body?.targetUid || '').toString().trim();
+  const targetUsername = (body?.targetUsername || '').toString().trim();
+  if (!targetUid && targetUsername) {
+    const lower = targetUsername.toLowerCase();
+    const snap = await db.collection('users').where('usernameLower', '==', lower).limit(1).get();
+    if (snap.empty) {
+      const err = new Error('User not found');
+      err.code = 'USER_NOT_FOUND';
+      throw err;
+    }
+    targetUid = snap.docs[0].id;
+  }
+  return targetUid;
 }
 
 function rewardAmountForStreak(streak, cfg) {
@@ -89,7 +96,7 @@ function userInclidesDefaults() {
     inclidesStreak: 0,
     inclidesLastClaimDayKey: null,
     inclidesOwnedItemIds: [],
-    inclidesEquippedItemId: null,
+    inclidesEquippedSlots: {},
   };
 }
 
@@ -114,6 +121,8 @@ router.get('/inclides/me', requireAuth, async (req, res) => {
       streakAfterNextClaim = last === y ? streak + 1 : 1;
     }
     const previewAmount = claimedToday ? 0 : rewardAmountForStreak(streakAfterNextClaim, cfg);
+    const equippedSlots = normalizeEquippedSlots(u, cfg);
+    const equippedItemId = equippedSlots.frames || u.inclidesEquippedItemId || null;
     res.json({
       balance,
       streak,
@@ -122,7 +131,8 @@ router.get('/inclides/me', requireAuth, async (req, res) => {
       nextStreakIfClaim: streakAfterNextClaim,
       previewNextReward: previewAmount,
       ownedItemIds: Array.isArray(u.inclidesOwnedItemIds) ? u.inclidesOwnedItemIds : [],
-      equippedItemId: u.inclidesEquippedItemId || null,
+      equippedSlots,
+      equippedItemId,
     });
   } catch (err) {
     console.error('[Inclides] me:', err);
@@ -303,22 +313,62 @@ router.post('/inclides/purchase', requireAuth, async (req, res) => {
 
 router.post('/inclides/equip', requireAuth, async (req, res) => {
   if (!isFirebaseAdminReady()) return res.status(503).json({ error: 'Unavailable' });
+  const db = getAdminFirestore();
+  const cfg = await getConfig(db);
+  const userRef = db.collection('users').doc(req.uid);
+  const clearAll = req.body?.clearAll === true;
+  const clearSlot = (req.body?.clearSlot || '').toString().trim();
   const itemId = req.body?.itemId === null || req.body?.itemId === ''
     ? null
     : (req.body?.itemId || '').toString().trim();
-  const db = getAdminFirestore();
-  const userRef = db.collection('users').doc(req.uid);
+
   try {
     const snap = await userRef.get();
     if (!snap.exists) return res.status(404).json({ error: 'User not found' });
-    const owned = Array.isArray(snap.data().inclidesOwnedItemIds)
-      ? snap.data().inclidesOwnedItemIds
-      : [];
-    if (itemId && !owned.includes(itemId)) {
+    const u = snap.data();
+    const owned = Array.isArray(u.inclidesOwnedItemIds) ? u.inclidesOwnedItemIds : [];
+    let slots = normalizeEquippedSlots(u, cfg);
+
+    if (clearAll) {
+      await userRef.update({
+        inclidesEquippedSlots: {},
+        inclidesEquippedItemId: admin.firestore.FieldValue.delete(),
+      });
+      return res.json({ ok: true, equippedSlots: {}, equippedItemId: null });
+    }
+
+    if (clearSlot) {
+      const next = { ...slots };
+      delete next[clearSlot];
+      const primary = next.frames || null;
+      await userRef.update({
+        inclidesEquippedSlots: next,
+        inclidesEquippedItemId: primary,
+      });
+      return res.json({ ok: true, equippedSlots: next, equippedItemId: primary });
+    }
+
+    if (!itemId) {
+      return res.status(400).json({ error: 'itemId, clearSlot, or clearAll required' });
+    }
+
+    const item = (cfg.shopItems || []).find((x) => x.id === itemId);
+    if (!item) return res.status(404).json({ error: 'Item not found' });
+    if (!owned.includes(itemId)) {
       return res.status(403).json({ error: 'You do not own this item' });
     }
-    await userRef.update({ inclidesEquippedItemId: itemId || null });
-    res.json({ ok: true, equippedItemId: itemId || null });
+    const sk = slotKeyForItem(item);
+    slots = { ...slots, [sk]: itemId };
+    const equippedPrimary = slots.frames || null;
+    await userRef.update({
+      inclidesEquippedSlots: slots,
+      inclidesEquippedItemId: equippedPrimary,
+    });
+    res.json({
+      ok: true,
+      equippedSlots: slots,
+      equippedItemId: equippedPrimary,
+    });
   } catch (err) {
     console.error('[Inclides] equip:', err);
     res.status(500).json({ error: 'Failed' });
@@ -329,14 +379,20 @@ router.post('/inclides/equip', requireAuth, async (req, res) => {
 
 router.post('/inclides/admin/grant', requireAuth, requirePermission('access_admin_panel'), async (req, res) => {
   if (!isFirebaseAdminReady()) return res.status(503).json({ error: 'Unavailable' });
-  const targetUid = (req.body?.targetUid || '').toString().trim();
   const rawAmt = req.body?.amount;
   const amount = typeof rawAmt === 'number' ? rawAmt : parseInt(String(rawAmt || '0'), 10);
   const note = (req.body?.note || '').toString().slice(0, 200);
-  if (!targetUid || !Number.isFinite(amount) || amount === 0) {
-    return res.status(400).json({ error: 'targetUid and non-zero amount required' });
-  }
   const db = getAdminFirestore();
+  let targetUid;
+  try {
+    targetUid = await resolveTargetUid(db, req.body);
+  } catch (e) {
+    if (e.code === 'USER_NOT_FOUND') return res.status(404).json({ error: 'User not found' });
+    throw e;
+  }
+  if (!targetUid || !Number.isFinite(amount) || amount === 0) {
+    return res.status(400).json({ error: 'targetUsername or targetUid, and non-zero amount required' });
+  }
   const ref = db.collection('users').doc(targetUid);
   try {
     const newBal = await db.runTransaction(async (t) => {
@@ -478,9 +534,11 @@ router.patch('/inclides/admin/config', requireAuth, requirePermission('access_ad
           name: String(x.name || x.id).slice(0, 80),
           description: String(x.description || '').slice(0, 300),
           price: Math.max(0, Math.round(Number(x.price) || 0)),
-          kind: String(x.kind || 'profile_flair').slice(0, 40),
+          kind: String(x.kind || 'extra').slice(0, 40),
+          category: String(x.category || 'Extras').slice(0, 48),
+          rarity: String(x.rarity || 'Common').slice(0, 20),
         }))
-        .slice(0, 40);
+        .slice(0, 64);
     }
     await ref.set(patch, { merge: true });
     const snap = await ref.get();

@@ -83,6 +83,7 @@ export async function createUserDoc(uid, data) {
     inclidesLastClaimDayKey: null,
     inclidesOwnedItemIds: [],
     inclidesEquippedItemId: null,
+    inclidesEquippedSlots: {},
     createdAt: serverTimestamp(),
   });
 }

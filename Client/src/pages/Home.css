@@ -3,34 +3,6 @@
   margin: 0 auto;
 }
 
-.home-quick-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  padding: 10px 14px;
-  margin-bottom: 1.75rem;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.home-quick-strip a {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  text-decoration: none;
-  padding: 6px 12px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.home-quick-strip a:hover {
-  background: rgba(99, 102, 241, 0.15);
-  color: var(--accent);
-}
-
 .home-empty {
   color: var(--text-muted);
   font-size: 0.9rem;

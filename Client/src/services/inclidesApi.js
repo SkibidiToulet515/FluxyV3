@@ -30,6 +30,7 @@ export async function postInclidesPurchase(itemId) {
   return apiJson('/api/inclides/purchase', { method: 'POST', body: { itemId } });
 }
 
-export async function postInclidesEquip(itemId) {
-  return apiJson('/api/inclides/equip', { method: 'POST', body: { itemId: itemId ?? null } });
+/** @param {Record<string, unknown>} payload itemId | clearSlot | clearAll */
+export async function postInclidesEquip(payload) {
+  return apiJson('/api/inclides/equip', { method: 'POST', body: payload || {} });
 }

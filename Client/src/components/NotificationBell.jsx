@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  useState, useEffect, useRef, useCallback, useLayoutEffect,
+} from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, Check, Loader2 } from 'lucide-react';
 import { apiJson } from '../services/apiClient';
@@ -20,6 +22,7 @@ export default function NotificationBell() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const wrapRef = useRef(null);
+  const dropRef = useRef(null);
   const lastSuccessAtRef = useRef(0);
 
   const unread = items.filter((n) => !n.read).length;
@@ -55,6 +58,31 @@ export default function NotificationBell() {
     if (!open) return;
     load({ silent: false });
   }, [open, load]);
+
+  useLayoutEffect(() => {
+    const el = dropRef.current;
+    if (!open || !el) {
+      return undefined;
+    }
+    const pad = 12;
+    const adjust = () => {
+      const r = el.getBoundingClientRect();
+      let tx = 0;
+      if (r.right > window.innerWidth - pad) {
+        tx += window.innerWidth - pad - r.right;
+      }
+      if (r.left + tx < pad) {
+        tx += pad - (r.left + tx);
+      }
+      el.style.transform = tx ? `translate3d(${tx}px, 0, 0)` : '';
+    };
+    adjust();
+    window.addEventListener('resize', adjust);
+    return () => {
+      window.removeEventListener('resize', adjust);
+      el.style.transform = '';
+    };
+  }, [open, items.length, loading]);
 
   useEffect(() => {
     function onDocClick(e) {
@@ -95,7 +123,7 @@ export default function NotificationBell() {
         {unread > 0 ? <span className="notif-bell-badge">{unread > 99 ? '99+' : unread}</span> : null}
       </button>
       {open ? (
-        <div className="notif-dropdown glass-card">
+        <div ref={dropRef} className="notif-dropdown glass-card">
           <div className="notif-dropdown-head">
             <span>Notifications</span>
             {items.some((n) => !n.read) ? (

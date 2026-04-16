@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useOutletContext, useNavigate, Link } from 'react-router-dom';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import {
   TrendingUp, Clock, Star, ArrowRight, Gamepad2, Globe, Sparkles, Heart, Layers,
 } from 'lucide-react';
@@ -18,6 +18,7 @@ import { useMagneticButton } from '../hooks/useMagneticButton';
 import { useRevealStagger } from '../hooks/useRevealStagger';
 import { GAMES_CATALOG_PATH } from '../config/subjects';
 import DailyInclidesCard from '../components/inclides/DailyInclidesCard';
+import { useInclides } from '../contexts/InclidesContext';
 import './Home.css';
 
 const DEFAULT_HOME_SECTION_ORDER = [
@@ -28,6 +29,7 @@ export default function Home() {
   const { onMenuToggle } = useOutletContext();
   const navigate = useNavigate();
   const { user, account } = useAuth();
+  const { loading: inclidesLoading, canClaimToday } = useInclides();
   const { favorites } = useLibrary();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -311,7 +313,7 @@ export default function Home() {
     <div className="home animate-fade-in">
       <Header title="Home" onMenuClick={onMenuToggle} />
 
-      {user ? <DailyInclidesCard /> : null}
+      {user && !inclidesLoading && canClaimToday ? <DailyInclidesCard /> : null}
 
       <section
         className="hero-banner glass-card fluxy-premium-surface"
@@ -360,15 +362,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {user ? (
-        <nav className="home-quick-strip glass-card" aria-label="Quick links">
-          <Link to="/library">Library</Link>
-          <Link to="/chat">Chat</Link>
-          <Link to="/profile">Profile</Link>
-          <Link to={GAMES_CATALOG_PATH}>Catalog</Link>
-        </nav>
-      ) : null}
 
       {sectionOrder.map((id) => renderSection(id))}
     </div>

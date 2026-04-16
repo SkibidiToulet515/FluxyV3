@@ -155,7 +155,7 @@ function modTargetOwnerLocked(u, actorHasProtectOwner) {
   return u.rolePrivilegeTier === 'owner';
 }
 
-function ModUserNotesPanel({ uid, onClose }) {
+function ModUserNotesPanel({ uid, displayUsername, onClose }) {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
@@ -203,7 +203,9 @@ function ModUserNotesPanel({ uid, onClose }) {
     <div className="mod-modal glass-card mod-user-notes">
       <h4>Staff notes</h4>
       <p className="admin-muted mod-notes-target">
-        User ID <code className="mod-notes-uid">{uid}</code>
+        <strong>{displayUsername || uid}</strong>
+        <span className="mod-notes-uid-hint"> · internal id</span>{' '}
+        <code className="mod-notes-uid">{uid}</code>
       </p>
       {localErr && <p className="admin-error-banner">{localErr}</p>}
       {loading ? (
@@ -261,7 +263,7 @@ function ModUsers() {
   const [warnReason, setWarnReason] = useState('');
   const [actionBusy, setActionBusy] = useState(null);
   const [confirmBan, setConfirmBan] = useState(null);
-  const [notesUid, setNotesUid] = useState(null);
+  const [notesTarget, setNotesTarget] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -384,8 +386,12 @@ function ModUsers() {
         <input placeholder="Search users…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      {notesUid && (
-        <ModUserNotesPanel uid={notesUid} onClose={() => setNotesUid(null)} />
+      {notesTarget && (
+        <ModUserNotesPanel
+          uid={notesTarget.uid}
+          displayUsername={notesTarget.username}
+          onClose={() => setNotesTarget(null)}
+        />
       )}
 
       {warnUid && (
@@ -452,7 +458,7 @@ function ModUsers() {
                         className="admin-btn admin-btn-ghost admin-btn-xs"
                         disabled={!!actionBusy || ownerLocked}
                         title={ownerLocked ? ownerLockedHint : 'Staff notes'}
-                        onClick={() => setNotesUid(u.uid)}
+                        onClick={() => setNotesTarget({ uid: u.uid, username: u.username || u.uid })}
                       >
                         <StickyNote size={12} />
                       </button>

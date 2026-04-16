@@ -190,6 +190,11 @@
   font-size: 0.8rem;
 }
 
+.mod-notes-uid-hint {
+  font-weight: 400;
+  opacity: 0.75;
+}
+
 .mod-notes-uid {
   font-size: 0.75rem;
   padding: 2px 6px;
