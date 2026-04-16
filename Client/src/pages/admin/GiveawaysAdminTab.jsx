@@ -240,13 +240,28 @@ export default function GiveawaysAdminTab() {
     if (!q) return;
     setMsg('');
     try {
-      const data = await apiJson(`/api/admin/users/search?q=${encodeURIComponent(q.toLowerCase())}`);
-      const lower = q.toLowerCase();
+      const t = q.toLowerCase();
+      let users = [];
+      try {
+        const data = await apiJson(`/api/admin/users/search?q=${encodeURIComponent(t)}`);
+        users = data.users || [];
+      } catch (e) {
+        if (e?.status === 404 || e?.status === 403) {
+          const data = await apiJson(`/api/users?q=${encodeURIComponent(t)}&limit=24`);
+          users = data.users || [];
+        } else {
+          throw e;
+        }
+      }
+      if (users.length === 0) {
+        const data = await apiJson(`/api/users?q=${encodeURIComponent(t)}&limit=24`);
+        users = data.users || [];
+      }
       const hit =
-        (data.users || []).find((u) => (u.username || '').toLowerCase() === lower)
-        || (data.users || [])[0];
+        users.find((u) => (u.username || '').toLowerCase() === t)
+        || users[0];
       if (!hit?.uid) {
-        setMsg('User not found — pick a username from search or type the full name.');
+        setMsg('User not found — try the full username (2+ letters for search).');
         return;
       }
       await apiJson(`/api/admin/users/${encodeURIComponent(hit.uid)}/referral-reset`, { method: 'POST' });

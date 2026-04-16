@@ -17,6 +17,7 @@ export default function UsernameAutocomplete({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hits, setHits] = useState([]);
+  const [searchErr, setSearchErr] = useState('');
   const wrapRef = useRef(null);
   const debounceRef = useRef(null);
 
@@ -24,14 +25,37 @@ export default function UsernameAutocomplete({
     const t = q.trim().toLowerCase();
     if (t.length < 2) {
       setHits([]);
+      setSearchErr('');
       return;
     }
     setLoading(true);
+    setSearchErr('');
     try {
-      const data = await apiJson(`/api/admin/users/search?q=${encodeURIComponent(t)}`);
-      setHits(data.users || []);
-    } catch {
+      let data;
+      try {
+        data = await apiJson(`/api/admin/users/search?q=${encodeURIComponent(t)}`);
+      } catch (e) {
+        /** Older API builds (404) or permission quirks: same prefix search via referral directory. */
+        if (e?.status === 404 || e?.status === 403) {
+          data = await apiJson(`/api/users?q=${encodeURIComponent(t)}&limit=24`);
+        } else {
+          throw e;
+        }
+      }
+      let list = data.users || [];
+      /** If admin route returned empty, try public user directory (prefix search). */
+      if (list.length === 0) {
+        try {
+          const fb = await apiJson(`/api/users?q=${encodeURIComponent(t)}&limit=24`);
+          list = fb.users || [];
+        } catch {
+          /* keep empty */
+        }
+      }
+      setHits(list);
+    } catch (e) {
       setHits([]);
+      setSearchErr(e?.message || 'Search failed');
     } finally {
       setLoading(false);
     }
@@ -74,6 +98,8 @@ export default function UsernameAutocomplete({
         <ul className="username-ac-dropdown glass-card" role="listbox">
           {loading ? (
             <li className="username-ac-muted">Searching…</li>
+          ) : searchErr ? (
+            <li className="username-ac-muted username-ac-err">{searchErr}</li>
           ) : hits.length === 0 ? (
             <li className="username-ac-muted">No matches</li>
           ) : (

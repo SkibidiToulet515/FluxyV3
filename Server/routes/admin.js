@@ -10,22 +10,63 @@ const router = express.Router();
 router.use(requireAuth);
 router.use(requirePermission('access_admin_panel'));
 
-/** Prefix search on usernameLower for admin tooling (Inclides grant, etc.). */
+/** Prefix search on username for admin tooling (Inclides grant, etc.). */
 router.get('/users/search', async (req, res) => {
   try {
     const q = (req.query.q || '').toString().trim().toLowerCase().slice(0, 32);
     if (q.length < 2) return res.json({ users: [] });
     const db = getAdminFirestore();
-    const snap = await db
-      .collection('users')
-      .where('usernameLower', '>=', q)
-      .where('usernameLower', '<=', `${q}\uf8ff`)
-      .limit(12)
-      .get();
-    const users = snap.docs.map((d) => ({
-      uid: d.id,
-      username: d.data().username || '',
-    }));
+    const end = `${q}\uf8ff`;
+
+    const byId = new Map();
+
+    /** Preferred: orderBy + startAt/endAt (reliable prefix on usernameLower). */
+    try {
+      const snap = await db
+        .collection('users')
+        .orderBy('usernameLower')
+        .startAt(q)
+        .endAt(end)
+        .limit(24)
+        .get();
+      snap.docs.forEach((d) => {
+        const u = d.data();
+        byId.set(d.id, {
+          uid: d.id,
+          username: (u.username || '').trim() || d.id.slice(0, 8),
+        });
+      });
+    } catch (e) {
+      console.warn('[Admin] user search orderBy path:', e?.message || e);
+    }
+
+    /** Legacy / missing usernameLower: scan bounded sets + prefix in memory. */
+    if (byId.size === 0) {
+      const snapOrdered = await db.collection('users').orderBy('usernameLower').limit(600).get();
+      snapOrdered.docs.forEach((d) => {
+        const u = d.data();
+        const raw = (u.usernameLower || (u.username || '').toLowerCase() || '').trim();
+        if (!raw || !raw.startsWith(q)) return;
+        byId.set(d.id, {
+          uid: d.id,
+          username: (u.username || '').trim() || raw.slice(0, 24),
+        });
+      });
+    }
+    if (byId.size === 0) {
+      const snapAny = await db.collection('users').limit(400).get();
+      snapAny.docs.forEach((d) => {
+        const u = d.data();
+        const raw = (u.usernameLower || (u.username || '').toLowerCase() || '').trim();
+        if (!raw || !raw.startsWith(q)) return;
+        byId.set(d.id, {
+          uid: d.id,
+          username: (u.username || '').trim() || raw.slice(0, 24),
+        });
+      });
+    }
+
+    const users = Array.from(byId.values()).slice(0, 12);
     res.json({ users });
   } catch (err) {
     console.error('[Admin] user search:', err);
