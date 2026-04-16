@@ -1,9 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, Maximize, Minimize, ExternalLink } from 'lucide-react';
-import { fetchGames } from '../utils/api';
+import { fetchGames, addRecentlyPlayed } from '../utils/api';
 import { getMockGameById } from '../data/mockHomeGames.js';
 import { getGamePlaySrc } from '../utils/gamePlayUrl';
+import { auth } from '../services/firebase';
+import { logActivity } from '../services/libraryFirestore';
+import { GAMES_CATALOG_PATH } from '../config/subjects';
 import './GamePlayer.css';
 
 export default function GamePlayer() {
@@ -15,15 +18,48 @@ export default function GamePlayer() {
   const containerRef = useRef(null);
 
   useEffect(() => {
+    let cancelled = false;
     fetchGames()
-      .then((games) => {
+      .then(async (games) => {
         const found = games.find((g) => g.id === gameId);
-        setGame(found || getMockGameById(gameId) || null);
+        const g = found || getMockGameById(gameId) || null;
+        if (cancelled) return;
+        setGame(g);
+        if (g) {
+          addRecentlyPlayed(g);
+          logActivity({
+            kind: 'game',
+            refId: g.id,
+            label: g.name,
+            path: `/play/${g.id}`,
+          });
+          const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+          if (base) {
+            const headers = { 'Content-Type': 'application/json' };
+            if (auth.currentUser) {
+              try {
+                headers.Authorization = `Bearer ${await auth.currentUser.getIdToken()}`;
+              } catch {
+                /* ignore */
+              }
+            }
+            fetch(`${base}/api/analytics/play`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ gameId: g.id }),
+            }).catch(() => {});
+          }
+        }
       })
       .catch(() => {
-        setGame(getMockGameById(gameId) || null);
+        if (!cancelled) setGame(getMockGameById(gameId) || null);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [gameId]);
 
   useEffect(() => {
@@ -57,7 +93,7 @@ export default function GamePlayer() {
         <div className="game-player-not-found glass-card">
           <h2>Game Not Found</h2>
           <p>The game you&apos;re looking for doesn&apos;t exist.</p>
-          <button className="btn btn-primary" onClick={() => navigate('/math')}>
+          <button className="btn btn-primary" onClick={() => navigate(GAMES_CATALOG_PATH)}>
             <ArrowLeft size={18} />
             Back to Games
           </button>

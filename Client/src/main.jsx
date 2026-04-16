@@ -5,6 +5,7 @@ import App from './App';
 import { ThemeProvider } from './themes/ThemeContext';
 import { AuthProvider } from './utils/AuthContext';
 import './themes/globals.css';
+import './themes/design-system.css';
 import './themes/premium-effects.css';
 import './themes/performance-tiers.css';
 

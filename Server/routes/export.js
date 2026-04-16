@@ -3,6 +3,21 @@ import { verifyToken, getAdminFirestore } from '../config/firebase.js';
 
 const router = Router();
 
+/** Only allow CSS custom property keys and safe string values (no url(), @import, etc.). */
+function sanitizeCustomTheme(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+  const out = {};
+  for (const [k, v] of Object.entries(input)) {
+    if (!/^--[a-zA-Z0-9_-]+$/.test(k)) continue;
+    if (typeof v !== 'string') continue;
+    const s = v.trim().slice(0, 400);
+    if (!s) continue;
+    if (/url\s*\(|expression\s*\(|@import|javascript:|data:\s*text\/html/i.test(s)) continue;
+    out[k] = s;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
 async function authenticate(req, res) {
   const auth = req.headers.authorization?.replace('Bearer ', '');
   if (!auth) { res.status(401).json({ error: 'Not authenticated' }); return null; }
@@ -86,8 +101,9 @@ router.post('/import', async (req, res) => {
     if (data.profile?.bio && typeof data.profile.bio === 'string') {
       updates.bio = data.profile.bio.slice(0, 500);
     }
-    if (data.settings?.customTheme && typeof data.settings.customTheme === 'object') {
-      updates.customTheme = data.settings.customTheme;
+    if (data.settings?.customTheme != null) {
+      const sanitized = sanitizeCustomTheme(data.settings.customTheme);
+      if (sanitized) updates.customTheme = sanitized;
     }
 
     if (Object.keys(updates).length > 0) {

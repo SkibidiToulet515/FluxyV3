@@ -179,3 +179,50 @@
 .mod-role-card-protected {
   border-color: rgba(251, 191, 36, 0.35);
 }
+
+.mod-user-notes {
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.mod-notes-target {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+}
+
+.mod-notes-uid {
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
+  word-break: break-all;
+}
+
+.mod-notes-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.mod-notes-item {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.mod-notes-item:last-child {
+  border-bottom: none;
+}
+
+.mod-notes-body {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.mod-notes-meta {
+  font-size: 0.65rem;
+}

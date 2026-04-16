@@ -1,14 +1,21 @@
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import {
   Home, Gamepad2, Globe, MessageCircle, Settings,
-  ChevronLeft, ChevronRight, LogOut, Circle, ShieldAlert, ShieldCheck, Gavel,
+  ChevronLeft, ChevronRight, LogOut, Circle, ShieldAlert, ShieldCheck, Gavel, Heart,
+  ShoppingBag, Package, Wallet,
 } from 'lucide-react';
+import NotificationBell from './NotificationBell';
+import InclidesBalancePill from './inclides/InclidesBalancePill';
 import { useAuth } from '../utils/AuthContext';
 import { isGamesSectionPath, isProxySectionPath } from '../config/subjects';
 import './Sidebar.css';
 
 const NAV_ITEMS = [
   { to: '/', icon: Home, label: 'Home', match: (p) => p === '/' },
+  { to: '/library', icon: Heart, label: 'Library', match: (p) => p.startsWith('/library') },
+  { to: '/shop', icon: ShoppingBag, label: 'Shop', match: (p) => p.startsWith('/shop') },
+  { to: '/inventory', icon: Package, label: 'Inventory', match: (p) => p.startsWith('/inventory') },
+  { to: '/wallet', icon: Wallet, label: 'Inclides', match: (p) => p.startsWith('/wallet') },
   {
     to: '/games',
     icon: Gamepad2,
@@ -58,13 +65,17 @@ export default function Sidebar({ collapsed, onToggle, account, onLogout }) {
               <span className="logo-text-y">y</span>
             </span>
           </Link>
-          <button
-            className="sidebar-collapse-btn"
-            onClick={onToggle}
-            title={collapsed ? 'Expand' : 'Collapse'}
-          >
-            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          </button>
+          <div className="sidebar-header-actions">
+            <InclidesBalancePill compact />
+            <NotificationBell />
+            <button
+              className="sidebar-collapse-btn"
+              onClick={onToggle}
+              title={collapsed ? 'Expand' : 'Collapse'}
+            >
+              {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            </button>
+          </div>
         </div>
 
         <nav className="sidebar-nav">

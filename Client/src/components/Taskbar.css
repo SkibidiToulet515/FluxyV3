@@ -3,13 +3,29 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60px;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  z-index: 100;
+  border-top: 1px solid var(--border);
+  padding: 6px 0.5rem 4px;
+  gap: 4px;
+}
+
+.taskbar-inclides {
+  display: flex;
+  justify-content: center;
+  padding: 2px 0 4px;
+}
+
+.taskbar-links {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  z-index: 100;
-  border-top: 1px solid var(--border);
-  padding: 0 0.5rem;
+  flex: 1;
+  min-height: 52px;
 }
 
 .taskbar-link {

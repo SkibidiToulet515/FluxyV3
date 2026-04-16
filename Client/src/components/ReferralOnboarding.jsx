@@ -21,6 +21,13 @@ export default function ReferralOnboarding() {
   const [limitHint, setLimitHint] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [inviteFromLink] = useState(() => {
+    try {
+      return (localStorage.getItem('fluxy-invite-code') || '').trim();
+    } catch {
+      return '';
+    }
+  });
   const formRef = useRef(null);
   const debounceRef = useRef(null);
   const limitTimerRef = useRef(null);
@@ -132,6 +139,13 @@ export default function ReferralOnboarding() {
       secondaryLabel=""
     >
       <form ref={formRef} id="fluxy-referral-form" className="referral-onboarding-form" onSubmit={handleSubmit}>
+        {inviteFromLink ? (
+          <p className="referral-onboarding-invite-hint" role="status">
+            You opened Fluxy with invite code{' '}
+            <span className="referral-onboarding-invite-code">{inviteFromLink}</span>. Completing this step
+            credits your referrers.
+          </p>
+        ) : null}
         <label className="referral-onboarding-self">
           <input
             type="checkbox"

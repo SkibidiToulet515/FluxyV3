@@ -1,0 +1,59 @@
+.cms-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+.cms-textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+.cms-order-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+.cms-order-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.15);
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.cms-order-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cms-hide {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.cms-msg {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--accent);
+}

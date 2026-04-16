@@ -96,6 +96,16 @@ router.post('/referral', async (req, res) => {
       hasCompletedReferral: true,
       referralCompletedAt: ts,
     });
+    if (!foundMyself && referrals.length) {
+      const inc = admin.firestore.FieldValue.increment(1);
+      for (const refUid of referrals) {
+        try {
+          await db.collection('users').doc(refUid).update({ referralSignups: inc });
+        } catch (e) {
+          console.warn('[Onboarding] referral increment', refUid, e?.message);
+        }
+      }
+    }
     res.json({ ok: true });
   } catch (err) {
     console.error('[Onboarding] save referral:', err);

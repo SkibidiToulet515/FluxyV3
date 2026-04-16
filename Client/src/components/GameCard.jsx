@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Play } from 'lucide-react';
 import { addRecentlyPlayed } from '../utils/api';
+import FavoriteButton from './FavoriteButton';
 import './GameCard.css';
 
 const CATEGORY_COLORS = {
@@ -26,7 +27,7 @@ export default function GameCard({ game }) {
 
   function handlePlay() {
     addRecentlyPlayed(game);
-    navigate(`/games/${game.id}`);
+    navigate(`/game/${game.id}`);
   }
 
   function handleKeyDown(e) {
@@ -48,6 +49,9 @@ export default function GameCard({ game }) {
       <div className="game-card-flip-inner">
         <div className="game-card-face game-card-face--front">
           <div className="game-card-thumb" style={{ '--card-accent': color }}>
+            <span className="game-card-fav-slot" onClick={(e) => e.stopPropagation()}>
+              <FavoriteButton kind="game" refId={game.id} meta={{ title: game.name, category: game.category }} />
+            </span>
             <span className="game-card-initials">{initials}</span>
             <div className="game-card-play-overlay">
               <Play size={28} />

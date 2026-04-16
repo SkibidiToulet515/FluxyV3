@@ -3,7 +3,7 @@ import { useOutletContext, Link } from 'react-router-dom';
 import {
   Palette, Layout, User, Circle, Check, Zap, Shield, Wifi, Camera, Loader2,
   ShieldCheck, Flag, Paintbrush, Image, Sparkles, MousePointer, Download, Gavel, Bell,
-  Upload, Trash2, ToggleLeft, ToggleRight, Eye, Cpu,
+  Upload, Trash2, ToggleLeft, ToggleRight, Eye, Cpu, Gift, Rows3,
 } from 'lucide-react';
 import { useTheme } from '../themes/ThemeContext';
 import { useAuth } from '../utils/AuthContext';
@@ -27,7 +27,16 @@ import {
 } from '../utils/performanceProfile';
 import ThemeMaker from '../components/ThemeMaker';
 import Header from '../components/Header';
+import { setFluxyUiPreference } from '../hooks/useFluxyUiPreferences';
 import './Settings.css';
+
+function readUiStorage(key, fallback) {
+  try {
+    return localStorage.getItem(key) || fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 const STATUSES = [
   { key: 'online', label: 'Online', color: '#34d399' },
@@ -52,6 +61,9 @@ export default function Settings() {
   const [clickEnabled, setClickEnabled] = useState(() => localStorage.getItem('fluxy-click-effect') !== 'false');
   const [perfPreset, setPerfPreset] = useState(() => getPerformancePreset());
   const [inbox, setInbox] = useState([]);
+  const [referralInfo, setReferralInfo] = useState(null);
+  const [uiDensity, setUiDensity] = useState(() => readUiStorage('fluxy-ui-density', 'comfortable'));
+  const [uiMotion, setUiMotion] = useState(() => readUiStorage('fluxy-ui-motion', 'full'));
 
   const perfSnapshot = useMemo(() => {
     const preset = getPerformancePreset();
@@ -88,6 +100,22 @@ export default function Settings() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!account?.uid) return;
+      try {
+        const data = await apiJson('/api/referral/me');
+        if (!cancelled) setReferralInfo(data);
+      } catch {
+        if (!cancelled) setReferralInfo(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [account?.uid]);
+
   function handleLayoutChange(mode) {
     setLayout(mode);
     setLayoutMode(mode);
@@ -117,6 +145,16 @@ export default function Settings() {
     localStorage.setItem(FLUXY_PERFORMANCE_KEY, mode);
     setPerfPreset(mode);
     window.location.reload();
+  }
+
+  function handleUiDensity(next) {
+    setUiDensity(next);
+    setFluxyUiPreference('density', next);
+  }
+
+  function handleUiMotion(next) {
+    setUiMotion(next);
+    setFluxyUiPreference('motion', next);
   }
 
   return (
@@ -165,8 +203,88 @@ export default function Settings() {
         />
       )}
 
+      {/* --- Interface --- */}
+      <section className="settings-section glass-card">
+        <div className="settings-section-header">
+          <Rows3 size={20} />
+          <div>
+            <h3>Interface</h3>
+            <p>Density and motion (applies immediately)</p>
+          </div>
+        </div>
+        <p className="settings-muted">
+          Tighter layout and reduced motion work with the global design tokens in{' '}
+          <code className="settings-code">design-system.css</code>.
+        </p>
+        <div className="settings-perf-buttons" style={{ marginBottom: '0.75rem' }}>
+          <span className="settings-muted" style={{ width: '100%', marginBottom: '0.35rem' }}>Density</span>
+          <button
+            type="button"
+            className={`btn btn-secondary ${uiDensity === 'comfortable' ? 'active' : ''}`}
+            onClick={() => handleUiDensity('comfortable')}
+          >
+            Comfortable
+          </button>
+          <button
+            type="button"
+            className={`btn btn-secondary ${uiDensity === 'compact' ? 'active' : ''}`}
+            onClick={() => handleUiDensity('compact')}
+          >
+            Compact
+          </button>
+        </div>
+        <div className="settings-perf-buttons">
+          <span className="settings-muted" style={{ width: '100%', marginBottom: '0.35rem' }}>Motion</span>
+          <button
+            type="button"
+            className={`btn btn-secondary ${uiMotion === 'full' ? 'active' : ''}`}
+            onClick={() => handleUiMotion('full')}
+          >
+            Full
+          </button>
+          <button
+            type="button"
+            className={`btn btn-secondary ${uiMotion === 'reduced' ? 'active' : ''}`}
+            onClick={() => handleUiMotion('reduced')}
+          >
+            Reduced
+          </button>
+        </div>
+      </section>
+
       {/* --- Background --- */}
       {account && <BackgroundSection uid={account.uid} />}
+
+      {account && (
+        <section className="settings-section glass-card">
+          <div className="settings-section-header">
+            <Gift size={20} />
+            <div>
+              <h3>Referral</h3>
+              <p>Your invite code and signups from onboarding</p>
+            </div>
+          </div>
+          {referralInfo ? (
+            <div className="settings-referral-block">
+              <p className="settings-muted">
+                <strong>Code:</strong> <code className="settings-code">{referralInfo.code}</code>
+              </p>
+              {referralInfo.inviteUrl ? (
+                <p className="settings-muted">
+                  <strong>Link:</strong>{' '}
+                  <span className="settings-ellipsis">{referralInfo.inviteUrl}</span>
+                </p>
+              ) : null}
+              <p className="settings-muted">
+                People who credited you in onboarding:{' '}
+                <strong>{referralInfo.referralSignups ?? 0}</strong>
+              </p>
+            </div>
+          ) : (
+            <p className="settings-muted">Loading referral info…</p>
+          )}
+        </section>
+      )}
 
       {/* --- Effects --- */}
       <section className="settings-section glass-card">

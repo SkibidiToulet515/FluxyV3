@@ -13,6 +13,37 @@ service firebase.storage {
         && firestore.get(/databases/(default)/documents/roleDefinitions/$(ugsGamesActorRole())).data.permissions.manage_games == true;
     }
 
+    function allowedChatContentType() {
+      let ct = request.resource.contentType;
+      return request.resource.size < 10 * 1024 * 1024
+        && (ct.matches('image/.*')
+            || ct == 'application/pdf'
+            || ct == 'application/msword'
+            || ct == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            || ct == 'application/vnd.ms-excel'
+            || ct == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            || ct == 'text/plain'
+            || ct == 'text/csv'
+            || ct == 'application/zip'
+            || ct == 'application/x-zip-compressed');
+    }
+
+    function allowedMediaContentType() {
+      let ct = request.resource.contentType;
+      return request.resource.size < 10 * 1024 * 1024
+        && (ct.matches('image/.*')
+            || ct.matches('video/.*')
+            || ct == 'application/pdf'
+            || ct == 'application/msword'
+            || ct == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            || ct == 'application/vnd.ms-excel'
+            || ct == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            || ct == 'text/plain'
+            || ct == 'text/csv'
+            || ct == 'application/zip'
+            || ct == 'application/x-zip-compressed');
+    }
+
     // Game files (UGS)
     match /ugsgames/{gameId}/{fileName} {
       allow read: if true;
@@ -35,18 +66,38 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
     }
 
-    // Server icons
+    // Legacy flat paths — read-only (migrate to nested paths for uploads)
     match /serverIcons/{fileName} {
       allow read: if true;
+      allow write: if false;
+    }
+
+    match /groupIcons/{fileName} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /thumbnails/{fileName} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Server icons — only members of the server may write under serverIcons/{serverId}/...
+    match /serverIcons/{serverId}/{fileName} {
+      allow read: if true;
       allow write: if request.auth != null
+        && firestore.exists(/databases/(default)/documents/servers/$(serverId))
+        && request.auth.uid in firestore.get(/databases/(default)/documents/servers/$(serverId)).data.members
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
 
     // Group chat icons
-    match /groupIcons/{fileName} {
+    match /groupIcons/{groupId}/{fileName} {
       allow read: if true;
       allow write: if request.auth != null
+        && firestore.exists(/databases/(default)/documents/groupChats/$(groupId))
+        && request.auth.uid in firestore.get(/databases/(default)/documents/groupChats/$(groupId)).data.members
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
@@ -54,14 +105,13 @@ service firebase.storage {
     // Chat attachments (images + documents in DMs, groups, servers)
     match /chat/{path=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null
-        && request.resource.size < 10 * 1024 * 1024;
+      allow write: if request.auth != null && allowedChatContentType();
     }
 
-    // Game thumbnails
-    match /thumbnails/{fileName} {
+    // Game thumbnails — same privilege as UGS game management
+    match /thumbnails/{gameId}/{fileName} {
       allow read: if true;
-      allow write: if request.auth != null
+      allow write: if ugsGamesCanManage()
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
@@ -81,8 +131,7 @@ service firebase.storage {
     // General media
     match /media/{path=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null
-        && request.resource.size < 10 * 1024 * 1024;
+      allow write: if request.auth != null && allowedMediaContentType();
     }
   }
 }

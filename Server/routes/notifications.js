@@ -46,6 +46,25 @@ router.get('/me', async (req, res) => {
   }
 });
 
+router.post('/read-all', async (req, res) => {
+  if (!isFirebaseAdminReady()) return res.status(503).json({ error: 'Unavailable' });
+  try {
+    const db = getAdminFirestore();
+    const col = db.collection('users').doc(req.uid).collection('notifications');
+    const snap = await col.where('read', '==', false).limit(500).get();
+    const batch = db.batch();
+    const ts = admin.firestore.FieldValue.serverTimestamp();
+    snap.docs.forEach((d) => {
+      batch.update(d.ref, { read: true, readAt: ts });
+    });
+    await batch.commit();
+    res.json({ ok: true, updated: snap.size });
+  } catch (err) {
+    console.error('[Notifications] read-all:', err);
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
 router.patch('/:id/read', async (req, res) => {
   if (!isFirebaseAdminReady()) return res.status(503).json({ error: 'Unavailable' });
   try {

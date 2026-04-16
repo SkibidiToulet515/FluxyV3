@@ -1,13 +1,17 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  Home, Gamepad2, Globe, MessageCircle, Settings, ShieldAlert, ShieldCheck, Gavel,
+  Home, Gamepad2, Globe, MessageCircle, Settings, ShieldAlert, ShieldCheck, Gavel, Heart,
+  ShoppingBag,
 } from 'lucide-react';
 import { useAuth } from '../utils/AuthContext';
 import { isGamesSectionPath, isProxySectionPath } from '../config/subjects';
+import InclidesBalancePill from './inclides/InclidesBalancePill';
 import './Taskbar.css';
 
 const NAV_ITEMS = [
   { to: '/', icon: Home, label: 'Home', match: (p) => p === '/' },
+  { to: '/library', icon: Heart, label: 'Library', match: (p) => p.startsWith('/library') },
+  { to: '/shop', icon: ShoppingBag, label: 'Shop', match: (p) => p.startsWith('/shop') },
   { to: '/games', icon: Gamepad2, label: 'Games', match: isGamesSectionPath },
   { to: '/history', icon: Globe, label: 'Proxy', match: isProxySectionPath },
   { to: '/chat', icon: MessageCircle, label: 'Chat', match: (p) => p === '/chat' },
@@ -23,6 +27,10 @@ export default function Taskbar() {
 
   return (
     <nav className="taskbar glass-bg">
+      <div className="taskbar-inclides">
+        <InclidesBalancePill compact />
+      </div>
+      <div className="taskbar-links">
       {NAV_ITEMS.map(({ to, icon: Icon, label, match }) => {
         const active = match(location.pathname);
         return (
@@ -59,6 +67,7 @@ export default function Taskbar() {
           <span>Admin</span>
         </NavLink>
       )}
+      </div>
     </nav>
   );
 }

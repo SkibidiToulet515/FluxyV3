@@ -16,7 +16,12 @@ export default function LoadingScreen({ onDone }) {
   }, [hiding, onDone]);
 
   return (
-    <div className={`loading-screen ${hiding ? 'hiding' : ''}`}>
+    <div
+      className={`loading-screen ${hiding ? 'hiding' : ''}`}
+      role="status"
+      aria-live="polite"
+      aria-busy={!hiding}
+    >
       <div className="loading-glow" />
       <div className="loading-center">
         <div className="loading-logo">

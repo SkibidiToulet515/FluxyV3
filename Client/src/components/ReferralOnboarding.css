@@ -6,6 +6,23 @@
   gap: 0.75rem;
 }
 
+.referral-onboarding-invite-hint {
+  margin: 0;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text-secondary, #d4d4d8);
+  background: rgba(34, 211, 238, 0.08);
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  border-radius: 10px;
+}
+
+.referral-onboarding-invite-code {
+  font-weight: 600;
+  font-family: ui-monospace, monospace;
+  color: var(--accent, #22d3ee);
+}
+
 .referral-onboarding-self {
   display: flex;
   align-items: center;

@@ -1,0 +1,37 @@
+.fluxy-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.09) 45%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: fluxy-shimmer 1.35s ease-in-out infinite;
+}
+
+@keyframes fluxy-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.fluxy-skeleton-card {
+  min-height: 168px;
+  border-radius: 14px;
+}
+
+.fluxy-skeleton-row {
+  height: 12px;
+  border-radius: 6px;
+  margin: 8px 0;
+  max-width: 220px;
+}
+
+.fluxy-skeleton-row--wide {
+  max-width: 100%;
+}

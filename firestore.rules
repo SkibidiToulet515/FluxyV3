@@ -119,12 +119,29 @@ service cloud.firestore {
         allow read: if isOwner(uid);
         allow write: if false;
       }
+
+      match /favorites/{favId} {
+        allow read, write: if isOwner(uid);
+      }
+      match /collections/{cid} {
+        allow read, write: if isOwner(uid);
+      }
+      match /activityLog/{eid} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /inclidesTransactions/{txId} {
+        allow read: if isOwner(uid);
+        allow write: if false;
+      }
+
       allow create: if isOwner(uid)
         && request.resource.data.role == 'user';
 
       allow update: if isOwner(uid)
         && !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['role', 'banned', 'warnings', 'mutedUntil', 'chatRestricted', 'moderationNote'])
+          .hasAny(['role', 'banned', 'warnings', 'mutedUntil', 'chatRestricted', 'moderationNote',
+            'inclidesBalance', 'inclidesStreak', 'inclidesLastClaimDayKey', 'inclidesOwnedItemIds', 'inclidesEquippedItemId'])
         && request.resource.data.role == resource.data.role
         && request.resource.data.keys().hasAll(['role', 'username', 'email']);
 
@@ -365,6 +382,26 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if hasPerm('manage_games');
       allow delete: if isAdmin();
+
+      match /reviews/{reviewId} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
+    // Homepage / CMS (read by anyone, writes via Admin SDK only)
+    match /appConfig/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Server-maintained aggregates (Admin SDK / API only)
+    match /platformAnalytics/{doc=**} {
+      allow read, write: if false;
+    }
+
+    match /moderationUserNotes/{noteId} {
+      allow read, write: if false;
     }
 
     // Giveaways + entries — all writes via Cloud API (Admin SDK)

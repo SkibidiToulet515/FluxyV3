@@ -18,6 +18,12 @@ import GamePlayer from './pages/GamePlayer';
 import Login from './pages/Login';
 import AdminPanel from './pages/AdminPanel';
 import ModeratorPanel from './pages/ModeratorPanel';
+import GameDetailPage from './pages/GameDetailPage';
+import LibraryPage from './pages/LibraryPage';
+import ProfilePage from './pages/ProfilePage';
+import ShopPage from './pages/ShopPage';
+import InventoryPage from './pages/InventoryPage';
+import WalletPage from './pages/WalletPage';
 import AppealPage from './pages/AppealPage';
 import ModerationAccountPage from './pages/ModerationAccountPage';
 import ToolRouteHost from './pages/ToolRouteHost';
@@ -67,10 +73,17 @@ function AppShell() {
         <Route path="/play/:gameId" element={<GamePlayer />} />
         <Route element={<RequireAuth><BannedGate><Layout /></BannedGate></RequireAuth>}>
           <Route path="/" element={<Home />} />
-          <Route path="/games" element={<Navigate to="/math" replace />} />
+          <Route path="/library" element={<LibraryPage />} />
+          <Route path="/shop" element={<ShopPage />} />
+          <Route path="/inventory" element={<InventoryPage />} />
+          <Route path="/wallet" element={<WalletPage />} />
+          <Route path="/game/:gameId" element={<GameDetailPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/u/:username" element={<ProfilePage />} />
+          <Route path="/games" element={<SubjectPage />} />
           <Route path="/history" element={<Proxy />} />
           <Route path="/proxy" element={<Navigate to="/history" replace />} />
-          <Route path="/math" element={<SubjectPage />} />
+          <Route path="/math" element={<Navigate to="/games" replace />} />
           <Route path="/tools/:toolId" element={<ToolRouteHost />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/moderation" element={<ModerationAccountPage />} />

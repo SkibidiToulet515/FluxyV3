@@ -1,5 +1,5 @@
 /**
- * Games catalog at /math. Nav: Games → /math, Proxy → /history (web proxy UI).
+ * Games catalog at /games (legacy /math redirects to /games).
  * SUBJECT_KEYS kept for Firestore / admin game docs.
  */
 
@@ -12,7 +12,7 @@ export const SUBJECT_KEYS = [
   'Science',
 ];
 
-export const GAMES_CATALOG_PATH = '/math';
+export const GAMES_CATALOG_PATH = '/games';
 
 export const GAMES_SECTION_PATHS = ['/games', '/math'];
 

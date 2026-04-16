@@ -1,0 +1,228 @@
+.profile-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding-bottom: 3rem;
+}
+
+.profile-hero {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  padding: 0;
+}
+
+.profile-banner {
+  height: 120px;
+  background: linear-gradient(110deg, rgba(99, 102, 241, 0.45), rgba(236, 72, 153, 0.25), rgba(34, 211, 238, 0.2));
+}
+
+.profile-hero-inner {
+  display: flex;
+  gap: 1.25rem;
+  padding: 0 1.5rem 1.5rem;
+  margin-top: -48px;
+  align-items: flex-end;
+}
+
+.profile-avatar-lg {
+  width: 96px;
+  height: 96px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #fff;
+  border: 3px solid rgba(15, 15, 20, 0.85);
+  flex-shrink: 0;
+}
+
+.profile-hero-text {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 4px;
+}
+
+.profile-hero-text h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.5rem;
+}
+
+.profile-bio {
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+  line-height: 1.45;
+}
+
+.profile-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.profile-meta-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-status-pill {
+  text-transform: capitalize;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.75rem;
+}
+
+.profile-friend-btn {
+  margin-top: 12px;
+}
+
+.profile-stats {
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.profile-stats h3 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+}
+
+.profile-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.profile-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.profile-stat strong {
+  font-size: 1.35rem;
+  color: var(--text-primary);
+}
+
+.profile-social {
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.profile-social h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.profile-social-lead {
+  margin: 0 0 0.75rem;
+}
+
+.profile-chat-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.profile-chat-link:hover {
+  text-decoration: underline;
+}
+
+.profile-friends-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-friends-list a {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.profile-friends-list a:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  color: var(--accent);
+}
+
+.profile-hint {
+  padding: 1.25rem 1.5rem;
+}
+
+.profile-hint h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.profile-hint a {
+  color: var(--accent);
+}
+
+.profile-miss {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.profile-stat-inclides .inclides-symbol {
+  color: #67e8f9;
+}
+
+.profile-page[data-inclides-flair] .profile-avatar-lg {
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.06),
+    0 0 28px rgba(34, 211, 238, 0.3);
+}
+
+.profile-page[data-inclides-flair='nebula-badge'] .profile-hero-text h2::after {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a78bfa, #22d3ee);
+  vertical-align: middle;
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
+}
+
+.skeleton-block {
+  min-height: 220px;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.7;
+  }
+}

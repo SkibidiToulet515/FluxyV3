@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import http from 'http';
 import path from 'path';
 import { Server } from 'socket.io';
@@ -21,7 +22,12 @@ import onboardingRouter from './routes/onboarding.js';
 import giveawaysRouter from './routes/giveaways.js';
 import appealsRouter from './routes/appeals.js';
 import notificationsRouter from './routes/notifications.js';
-import { initFirebase, ensureDefaultRoleDefinitions } from './config/firebase.js';
+import reviewsRouter from './routes/reviews.js';
+import analyticsRouter from './routes/analytics.js';
+import cmsRouter from './routes/cms.js';
+import referralPublicRouter from './routes/referralPublic.js';
+import inclidesRouter from './routes/inclides.js';
+import { initFirebase, ensureDefaultRoleDefinitions, verifyToken } from './config/firebase.js';
 import { UGS_DIR } from './config/paths.js';
 import { ugsLfsGuard } from './middleware/ugsLfsGuard.js';
 
@@ -31,31 +37,53 @@ ensureDefaultRoleDefinitions().catch((err) =>
 );
 
 const PORT = Number(process.env.PORT) || 3000;
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
-const ALLOWED_ORIGINS = CLIENT_ORIGIN.split(',').map(s => s.trim());
+
+function parseOriginList(raw) {
+  if (!raw || typeof raw !== 'string') return [];
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+const ALLOWED_ORIGINS = (() => {
+  const list = [
+    ...parseOriginList(process.env.CLIENT_ORIGIN),
+    ...parseOriginList(process.env.CORS_EXTRA_ORIGINS),
+  ];
+  return list.length ? list : ['http://localhost:5173'];
+})();
 const MIRROR_DOMAINS = ['fluxyv3.online', 'fluxyv3.store', 'fluxyv3.space', 'fluxyv3.site'];
 
+function isCorsOriginAllowed(origin) {
+  if (!origin) return true;
+  if (ALLOWED_ORIGINS.some((o) => origin === o)) return true;
+  if (MIRROR_DOMAINS.some((d) => origin === `https://${d}` || origin === `http://${d}`)) return true;
+  return false;
+}
+
+const SOCKET_AUTH_REQUIRED = process.env.SOCKET_AUTH_REQUIRED !== 'false';
+
 const app = express();
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number(process.env.API_RATE_LIMIT_PER_MIN) || 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, try again shortly.' },
+});
+
 app.use(
   cors({
     origin(origin, cb) {
-      if (
-        !origin ||
-        ALLOWED_ORIGINS.some((o) => origin === o) ||
-        origin.endsWith('.hosted.app') ||
-        origin.endsWith('.web.app') ||
-        origin.endsWith('.firebaseapp.com') ||
-        MIRROR_DOMAINS.some((d) => origin === `https://${d}` || origin === `http://${d}`)
-      ) {
-        cb(null, true);
-      } else {
-        cb(null, false);
-      }
+      cb(null, isCorsOriginAllowed(origin));
     },
     credentials: true,
   }),
 );
 app.use(express.json());
+app.use('/api', apiLimiter);
 
 // --- Static library files for proxy providers ---
 app.use('/scram/', express.static(scramjetPath));
@@ -89,6 +117,11 @@ app.use('/api', onboardingRouter);
 app.use('/api', giveawaysRouter);
 app.use('/api/appeals', appealsRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api', reviewsRouter);
+app.use('/api', analyticsRouter);
+app.use('/api', cmsRouter);
+app.use('/api', referralPublicRouter);
+app.use('/api', inclidesRouter);
 
 // --- Serve built frontend in production ---
 if (process.env.NODE_ENV === 'production') {
@@ -120,23 +153,31 @@ httpServer.on('upgrade', (req, socket, head) => {
 const io = new Server(httpServer, {
   cors: {
     origin(origin, cb) {
-      if (
-        !origin ||
-        ALLOWED_ORIGINS.some((o) => origin === o) ||
-        origin.endsWith('.hosted.app') ||
-        origin.endsWith('.web.app') ||
-        origin.endsWith('.firebaseapp.com') ||
-        MIRROR_DOMAINS.some((d) => origin === `https://${d}` || origin === `http://${d}`)
-      ) {
-        cb(null, true);
-      } else {
-        cb(null, false);
-      }
+      cb(null, isCorsOriginAllowed(origin));
     },
     methods: ['GET', 'POST'],
     credentials: true,
   },
 });
+
+if (SOCKET_AUTH_REQUIRED) {
+  io.use(async (socket, next) => {
+    const raw =
+      socket.handshake.auth?.token
+      ?? socket.handshake.query?.token
+      ?? socket.handshake.headers?.authorization?.replace(/^Bearer\s+/i, '');
+    const token = typeof raw === 'string' ? raw.trim() : '';
+    if (!token) {
+      return next(new Error('Unauthorized'));
+    }
+    const decoded = await verifyToken(token);
+    if (!decoded?.uid) {
+      return next(new Error('Unauthorized'));
+    }
+    socket.data.uid = decoded.uid;
+    next();
+  });
+}
 
 // --- Channel-based chat ---
 const CHANNELS = ['general', 'memes'];

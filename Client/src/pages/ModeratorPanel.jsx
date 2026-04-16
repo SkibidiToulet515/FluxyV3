@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useOutletContext, Navigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Flag, ScrollText, Shield, Gamepad2,
-  Search, Loader2, Check, Ban, Mic, Lock, Unlock, Gavel,
+  Search, Loader2, Check, Ban, Mic, Lock, Unlock, Gavel, StickyNote,
 } from 'lucide-react';
 import { useAuth } from '../utils/AuthContext';
 import { apiJson } from '../services/apiClient';
@@ -155,6 +155,101 @@ function modTargetOwnerLocked(u, actorHasProtectOwner) {
   return u.rolePrivilegeTier === 'owner';
 }
 
+function ModUserNotesPanel({ uid, onClose }) {
+  const [notes, setNotes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [localErr, setLocalErr] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLocalErr('');
+    try {
+      const data = await apiJson(`/api/moderation/users/${encodeURIComponent(uid)}/notes`);
+      setNotes(data.notes || []);
+    } catch (e) {
+      setLocalErr(e.message || 'Failed to load notes');
+      setNotes([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [uid]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function addNote() {
+    const body = text.trim();
+    if (!body) return;
+    setBusy(true);
+    setLocalErr('');
+    try {
+      await apiJson(`/api/moderation/users/${encodeURIComponent(uid)}/notes`, {
+        method: 'POST',
+        body: { body },
+      });
+      setText('');
+      await load();
+    } catch (e) {
+      setLocalErr(e.message || 'Could not save note');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mod-modal glass-card mod-user-notes">
+      <h4>Staff notes</h4>
+      <p className="admin-muted mod-notes-target">
+        User ID <code className="mod-notes-uid">{uid}</code>
+      </p>
+      {localErr && <p className="admin-error-banner">{localErr}</p>}
+      {loading ? (
+        <div className="admin-loading">
+          <Loader2 size={20} className="spin" /> Loading…
+        </div>
+      ) : (
+        <ul className="mod-notes-list">
+          {notes.map((n) => (
+            <li key={n.id} className="mod-notes-item">
+              <p className="mod-notes-body">{n.body}</p>
+              <span className="admin-muted mod-notes-meta">
+                {formatTime(n.createdAt)}
+                {n.authorUid ? ` · ${n.authorUid.slice(0, 8)}…` : ''}
+              </span>
+            </li>
+          ))}
+          {notes.length === 0 && (
+            <li className="admin-muted">No notes yet.</li>
+          )}
+        </ul>
+      )}
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Add an internal note (visible to moderators)"
+        rows={3}
+        className="mod-modal-textarea"
+      />
+      <div className="mod-modal-actions">
+        <button type="button" className="admin-btn admin-btn-ghost admin-btn-sm" onClick={onClose}>
+          Close
+        </button>
+        <button
+          type="button"
+          className="admin-btn admin-btn-primary admin-btn-sm"
+          onClick={addNote}
+          disabled={busy || !text.trim()}
+        >
+          {busy ? 'Saving…' : 'Add note'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ModUsers() {
   const { hasPermission } = useAuth();
   const actorHasProtectOwner = hasPermission('protect_owner');
@@ -166,6 +261,7 @@ function ModUsers() {
   const [warnReason, setWarnReason] = useState('');
   const [actionBusy, setActionBusy] = useState(null);
   const [confirmBan, setConfirmBan] = useState(null);
+  const [notesUid, setNotesUid] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -288,6 +384,10 @@ function ModUsers() {
         <input placeholder="Search users…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
+      {notesUid && (
+        <ModUserNotesPanel uid={notesUid} onClose={() => setNotesUid(null)} />
+      )}
+
       {warnUid && (
         <div className="mod-modal glass-card">
           <h4>Warn user</h4>
@@ -347,6 +447,15 @@ function ModUsers() {
                       {ownerLocked && (
                         <span className="mod-owner-lock-hint" title={ownerLockedHint}>Protected</span>
                       )}
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn-ghost admin-btn-xs"
+                        disabled={!!actionBusy || ownerLocked}
+                        title={ownerLocked ? ownerLockedHint : 'Staff notes'}
+                        onClick={() => setNotesUid(u.uid)}
+                      >
+                        <StickyNote size={12} />
+                      </button>
                       <button
                         type="button"
                         className="admin-btn admin-btn-ghost admin-btn-xs"

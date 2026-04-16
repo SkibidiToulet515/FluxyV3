@@ -78,6 +78,11 @@ export async function createUserDoc(uid, data) {
     avatar: data.avatar || null,
     bio: '',
     hasCompletedReferral: false,
+    inclidesBalance: 0,
+    inclidesStreak: 0,
+    inclidesLastClaimDayKey: null,
+    inclidesOwnedItemIds: [],
+    inclidesEquippedItemId: null,
     createdAt: serverTimestamp(),
   });
 }
@@ -812,11 +817,7 @@ export async function incrementGamePlays(gameId) {
 }
 
 // ─── Admin: Users ─────────────────────────────────────────────────────────────
-
-export async function getAllUsers() {
-  const snap = await getDocs(collection(db, 'users'));
-  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
-}
+// Use fetchAdminUsersPage() from apiClient — lists users via secured API with pagination.
 
 export async function submitUserReport({ reason, targetUid = null, targetUsername = null }) {
   const uid = auth.currentUser?.uid;

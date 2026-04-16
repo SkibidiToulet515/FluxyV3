@@ -237,10 +237,17 @@ router.post('/giveaways/preview-eligibility', requirePermission('access_admin_pa
     let matched = 0;
     let scanned = 0;
     const qs = await db.collection('users').orderBy('usernameLower').limit(maxScan).get();
-    for (const doc of qs.docs) {
-      scanned += 1;
-      const r = await userMatchesEligibility(db, doc.id, doc.data(), eligibility);
-      if (r.ok) matched += 1;
+    const docs = qs.docs;
+    const chunkSize = 32;
+    for (let i = 0; i < docs.length; i += chunkSize) {
+      const chunk = docs.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map((doc) => userMatchesEligibility(db, doc.id, doc.data(), eligibility)),
+      );
+      for (const r of results) {
+        scanned += 1;
+        if (r.ok) matched += 1;
+      }
     }
     res.json({ matched, scanned, capped: qs.size >= maxScan });
   } catch (err) {

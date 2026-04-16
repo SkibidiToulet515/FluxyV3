@@ -1,3 +1,25 @@
+.settings-referral-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-code {
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 0.9rem;
+}
+
+.settings-ellipsis {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
 .settings-page {
   max-width: 720px;
   margin: 0 auto;

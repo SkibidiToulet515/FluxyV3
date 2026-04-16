@@ -56,6 +56,21 @@
   margin-bottom: 1.5rem;
 }
 
+.login-invite-hint {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: -0.5rem 0 1rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  background: rgba(34, 211, 238, 0.08);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+}
+
+.login-invite-hint strong {
+  font-family: ui-monospace, monospace;
+  color: var(--accent);
+}
+
 .login-error {
   display: flex;
   align-items: center;

@@ -13,9 +13,20 @@ router.use(requirePermission('access_admin_panel'));
 router.get('/users', async (req, res) => {
   try {
     const db = getAdminFirestore();
-    const snap = await db.collection('users').get();
+    const limitNum = Math.min(250, Math.max(1, parseInt(String(req.query.limit || '100'), 10) || 100));
+    const cursor = typeof req.query.cursor === 'string' && req.query.cursor.trim()
+      ? req.query.cursor.trim()
+      : null;
+
+    let q = db.collection('users').orderBy(admin.firestore.FieldPath.documentId()).limit(limitNum);
+    if (cursor) {
+      const cur = await db.collection('users').doc(cursor).get();
+      if (cur.exists) q = q.startAfter(cur);
+    }
+    const snap = await q.get();
     const users = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
-    res.json({ users });
+    const nextCursor = snap.docs.length === limitNum ? snap.docs[snap.docs.length - 1].id : null;
+    res.json({ users, nextCursor });
   } catch (err) {
     console.error('[Admin] list users error:', err);
     res.status(500).json({ error: 'Failed to list users' });

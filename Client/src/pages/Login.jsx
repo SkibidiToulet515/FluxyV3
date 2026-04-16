@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogIn, UserPlus, Eye, EyeOff, AlertCircle, Mail, User, Loader2 } from 'lucide-react';
 import { useAuth } from '../utils/AuthContext';
@@ -29,6 +29,24 @@ export default function Login() {
   const [showEmail, setShowEmail] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [inviteHint, setInviteHint] = useState('');
+
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const ref = p.get('ref');
+      if (ref) {
+        const trimmed = ref.trim().slice(0, 32);
+        localStorage.setItem('fluxy-invite-code', trimmed);
+        setInviteHint(trimmed);
+        return;
+      }
+      const stored = (localStorage.getItem('fluxy-invite-code') || '').trim();
+      if (stored) setInviteHint(stored.slice(0, 32));
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -81,6 +99,12 @@ export default function Login() {
             ? 'Log in to continue to Fluxy'
             : 'Sign up to start playing'}
         </p>
+
+        {inviteHint ? (
+          <p className="login-invite-hint" role="status">
+            Invite code <strong>{inviteHint}</strong> is saved for onboarding.
+          </p>
+        ) : null}
 
         {error && (
           <div className="login-error">

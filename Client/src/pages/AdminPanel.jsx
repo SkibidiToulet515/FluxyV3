@@ -3,16 +3,15 @@ import { useOutletContext, Navigate } from 'react-router-dom';
 import {
   Users, Gamepad2, Shield, Search, Trash2, Edit3, Plus,
   Ban, ShieldCheck, ShieldAlert, UserCheck, Loader2, X, Check,
-  Eye, EyeOff, Star, AlertTriangle, Crown, Gift,
+  Eye, EyeOff, Star, AlertTriangle, Crown, Gift, BarChart3, LayoutGrid, Sparkles,
 } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '../utils/AuthContext';
 import {
-  getAllUsers,
   getAllGameDocs, createGameDoc, updateGameDoc, deleteGameDoc,
 } from '../services/firestore';
-import { apiJson } from '../services/apiClient';
+import { apiJson, fetchAdminUsersPage } from '../services/apiClient';
 import {
   PERMISSION_KEYS, PERMISSION_LABELS, OWNER_ROLE_KEY, TIER_LABELS, BUILTIN_ROLE_KEYS,
 } from '../utils/permissions';
@@ -21,6 +20,9 @@ import { normalizeFirestoreGameUrlInput } from '../utils/gamePlayUrl';
 import { SUBJECT_KEYS } from '../config/subjects';
 import Header from '../components/Header';
 import GiveawaysAdminTab from './admin/GiveawaysAdminTab';
+import AnalyticsTab from './admin/AnalyticsTab';
+import HomepageCmsTab from './admin/HomepageCmsTab';
+import InclidesAdminTab from './admin/InclidesAdminTab';
 import './AdminPanel.css';
 
 const ROLE_ICONS = { admin: ShieldAlert, mod: ShieldCheck, user: UserCheck, owner: Crown };
@@ -61,12 +63,24 @@ export default function AdminPanel() {
         <button className={`admin-tab ${tab === 'giveaways' ? 'active' : ''}`} onClick={() => setTab('giveaways')}>
           <Gift size={16} /> Giveaways
         </button>
+        <button className={`admin-tab ${tab === 'analytics' ? 'active' : ''}`} onClick={() => setTab('analytics')}>
+          <BarChart3 size={16} /> Analytics
+        </button>
+        <button className={`admin-tab ${tab === 'cms' ? 'active' : ''}`} onClick={() => setTab('cms')}>
+          <LayoutGrid size={16} /> Homepage
+        </button>
+        <button className={`admin-tab ${tab === 'inclides' ? 'active' : ''}`} onClick={() => setTab('inclides')}>
+          <Sparkles size={16} /> Inclides
+        </button>
       </div>
 
       {tab === 'users' && <UserManagement />}
       {tab === 'games' && <GameManagement />}
       {tab === 'roles' && <RoleManagement />}
       {tab === 'giveaways' && <GiveawaysAdminTab />}
+      {tab === 'analytics' && <AnalyticsTab />}
+      {tab === 'cms' && <HomepageCmsTab />}
+      {tab === 'inclides' && <InclidesAdminTab />}
     </div>
   );
 }
@@ -76,7 +90,9 @@ export default function AdminPanel() {
 function UserManagement() {
   const { hasPermission } = useAuth();
   const [users, setUsers] = useState([]);
+  const [usersCursor, setUsersCursor] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
   const [confirm, setConfirm] = useState(null);
   const canBan = hasPermission('ban_users');
@@ -84,10 +100,29 @@ function UserManagement() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await getAllUsers();
-    setUsers(data);
-    setLoading(false);
+    try {
+      const { users: page, nextCursor } = await fetchAdminUsersPage({ limit: 150 });
+      setUsers(page);
+      setUsersCursor(nextCursor);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  const loadMore = useCallback(async () => {
+    if (!usersCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const { users: page, nextCursor } = await fetchAdminUsersPage({
+        limit: 150,
+        cursor: usersCursor,
+      });
+      setUsers((prev) => [...prev, ...page]);
+      setUsersCursor(nextCursor);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [usersCursor, loadingMore]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -124,7 +159,10 @@ function UserManagement() {
         <Users size={20} />
         <div>
           <h3>User Management</h3>
-          <p>{users.length} registered users</p>
+          <p>
+            {users.length} user{users.length === 1 ? '' : 's'} loaded
+            {usersCursor ? ' — more available' : ''}
+          </p>
         </div>
       </div>
 
@@ -136,6 +174,7 @@ function UserManagement() {
       {loading ? (
         <div className="admin-loading"><Loader2 size={20} className="spin" /> Loading users...</div>
       ) : (
+        <>
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
@@ -191,6 +230,20 @@ function UserManagement() {
             </tbody>
           </table>
         </div>
+        {usersCursor ? (
+          <div className="admin-load-more">
+            <button
+              type="button"
+              className="admin-btn admin-btn-ghost admin-btn-sm"
+              disabled={loadingMore}
+              onClick={loadMore}
+            >
+              {loadingMore ? <Loader2 size={14} className="spin" /> : null}
+              {loadingMore ? ' Loading…' : 'Load more users'}
+            </button>
+          </div>
+        ) : null}
+        </>
       )}
     </section>
   );
@@ -488,6 +541,8 @@ function buildRoleChangeWarnings(targetUser, newRoleDef, roleList) {
 function RoleManagement() {
   const { hasPermission } = useAuth();
   const [users, setUsers] = useState([]);
+  const [usersCursor, setUsersCursor] = useState(null);
+  const [loadingMoreUsers, setLoadingMoreUsers] = useState(false);
   const [roleList, setRoleList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -505,13 +560,29 @@ function RoleManagement() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getAllUsers();
-      setUsers(data);
+      const { users: page, nextCursor } = await fetchAdminUsersPage({ limit: 150 });
+      setUsers(page);
+      setUsersCursor(nextCursor);
       await loadRoles();
     } finally {
       setLoading(false);
     }
   }, [loadRoles]);
+
+  const loadMoreUsers = useCallback(async () => {
+    if (!usersCursor || loadingMoreUsers) return;
+    setLoadingMoreUsers(true);
+    try {
+      const { users: page, nextCursor } = await fetchAdminUsersPage({
+        limit: 150,
+        cursor: usersCursor,
+      });
+      setUsers((prev) => [...prev, ...page]);
+      setUsersCursor(nextCursor);
+    } finally {
+      setLoadingMoreUsers(false);
+    }
+  }, [usersCursor, loadingMoreUsers]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -549,7 +620,10 @@ function RoleManagement() {
         <Shield size={20} />
         <div>
           <h3>Role Management</h3>
-          <p>Assign roles via secured API — Owner and high-privilege changes are guarded server-side</p>
+          <p>
+            Assign roles via secured API — Owner and high-privilege changes are guarded server-side.
+            Per-role counts below reflect loaded users only (use Load more in the table).
+          </p>
         </div>
       </div>
 
@@ -593,6 +667,7 @@ function RoleManagement() {
       {loading ? (
         <div className="admin-loading"><Loader2 size={20} className="spin" /> Loading...</div>
       ) : (
+        <>
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
@@ -686,6 +761,20 @@ function RoleManagement() {
             </tbody>
           </table>
         </div>
+        {usersCursor ? (
+          <div className="admin-load-more">
+            <button
+              type="button"
+              className="admin-btn admin-btn-ghost admin-btn-sm"
+              disabled={loadingMoreUsers}
+              onClick={loadMoreUsers}
+            >
+              {loadingMoreUsers ? <Loader2 size={14} className="spin" /> : null}
+              {loadingMoreUsers ? ' Loading…' : 'Load more users'}
+            </button>
+          </div>
+        ) : null}
+        </>
       )}
     </section>
   );

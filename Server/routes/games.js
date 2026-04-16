@@ -6,7 +6,7 @@ import { inferSubject, normalizeSubject } from '../lib/gameSubject.js';
 
 /** @type {{ at: number, data: Array<{ id: string, name: string, file: string, category: string, subject: string, playUrl?: string | null }> } | null} */
 let mergedCache = null;
-const MERGE_TTL_MS = 45_000;
+const MERGE_TTL_MS = 5 * 60 * 1000;
 
 async function getMergedGames() {
   if (mergedCache && Date.now() - mergedCache.at < MERGE_TTL_MS) {

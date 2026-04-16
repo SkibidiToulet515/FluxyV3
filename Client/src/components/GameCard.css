@@ -103,6 +103,18 @@
   filter: drop-shadow(0 0 12px color-mix(in srgb, var(--card-accent) 70%, transparent));
 }
 
+.game-card-fav-slot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+}
+
+.game-card-fav-slot .favorite-btn {
+  width: 32px;
+  height: 32px;
+}
+
 .game-card-thumb {
   position: relative;
   width: 100%;

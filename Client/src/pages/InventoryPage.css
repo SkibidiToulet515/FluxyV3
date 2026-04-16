@@ -1,0 +1,92 @@
+.inventory-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding-bottom: 3rem;
+}
+
+.inventory-hero {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.inventory-hero-icon {
+  color: #c4b5fd;
+  flex-shrink: 0;
+}
+
+.inventory-hero h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.2rem;
+}
+
+.inventory-hero p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.inventory-loading,
+.inventory-empty {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.inventory-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inventory-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 1rem 1.15rem;
+}
+
+.inventory-row .inclides-symbol {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.inventory-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inventory-row-text strong {
+  font-size: 0.95rem;
+}
+
+.inventory-row-text span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.inventory-equipped {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #34d399;
+  font-weight: 600;
+}
+
+.inventory-clear {
+  margin-top: 1.25rem;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+}

@@ -263,4 +263,51 @@ router.patch('/reports/:id', requirePermission('manage_users'), async (req, res)
   }
 });
 
+router.get('/users/:uid/notes', requirePermission('manage_users'), async (req, res) => {
+  if (!dbReady(res)) return;
+  try {
+    const db = getAdminFirestore();
+    const snap = await db
+      .collection('moderationUserNotes')
+      .where('targetUid', '==', req.params.uid)
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get();
+    const notes = snap.docs.map((d) => {
+      const x = d.data();
+      return {
+        id: d.id,
+        body: x.body || '',
+        authorUid: x.authorUid,
+        createdAt: x.createdAt?.toDate?.()?.toISOString() || null,
+      };
+    });
+    res.json({ notes });
+  } catch (err) {
+    console.error('[Moderation] notes list:', err);
+    res.status(500).json({ error: 'Failed to load notes' });
+  }
+});
+
+router.post('/users/:uid/notes', requirePermission('manage_users'), async (req, res) => {
+  if (!dbReady(res)) return;
+  const body = (req.body?.body || '').toString().slice(0, 2000);
+  if (!body.trim()) return res.status(400).json({ error: 'body required' });
+  try {
+    const db = getAdminFirestore();
+    const ts = admin.firestore.FieldValue.serverTimestamp();
+    const ref = await db.collection('moderationUserNotes').add({
+      targetUid: req.params.uid,
+      authorUid: req.uid,
+      body,
+      createdAt: ts,
+    });
+    await writeLog(req.uid, 'mod_note', { noteId: ref.id, preview: body.slice(0, 120) }, req.params.uid);
+    res.status(201).json({ ok: true, id: ref.id });
+  } catch (err) {
+    console.error('[Moderation] note add:', err);
+    res.status(500).json({ error: 'Failed to save note' });
+  }
+});
+
 export default router;

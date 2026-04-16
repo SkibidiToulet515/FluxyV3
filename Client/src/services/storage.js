@@ -127,7 +127,7 @@ export async function uploadChatImage(channelPath, file) {
 export async function uploadServerIcon(serverId, file) {
   validateFile(file, MAX_AVATAR_SIZE, ALLOWED_IMAGE_TYPES);
   const ext = file.name.split('.').pop();
-  const storageRef = ref(storage, `serverIcons/${serverId}.${ext}`);
+  const storageRef = ref(storage, `serverIcons/${serverId}/icon.${ext}`);
   await uploadBytes(storageRef, file, { contentType: file.type });
   return getDownloadURL(storageRef);
 }
@@ -135,7 +135,7 @@ export async function uploadServerIcon(serverId, file) {
 export async function uploadGroupIcon(groupId, file) {
   validateFile(file, MAX_AVATAR_SIZE, ALLOWED_IMAGE_TYPES);
   const ext = file.name.split('.').pop();
-  const storageRef = ref(storage, `groupIcons/${groupId}.${ext}`);
+  const storageRef = ref(storage, `groupIcons/${groupId}/icon.${ext}`);
   await uploadBytes(storageRef, file, { contentType: file.type });
   return getDownloadURL(storageRef);
 }
@@ -144,7 +144,7 @@ export async function uploadGroupIcon(groupId, file) {
 
 export async function uploadThumbnail(gameId, file) {
   const ext = file.name.split('.').pop();
-  const storageRef = ref(storage, `thumbnails/${gameId}.${ext}`);
+  const storageRef = ref(storage, `thumbnails/${gameId}/thumb.${ext}`);
   await uploadBytes(storageRef, file, { contentType: file.type });
   return getDownloadURL(storageRef);
 }

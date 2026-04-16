@@ -30,3 +30,10 @@ export async function apiJson(path, { method = 'GET', body } = {}) {
   }
   return data;
 }
+
+/** Paginated admin user list (Bearer token, access_admin_panel). */
+export async function fetchAdminUsersPage({ limit = 150, cursor = null } = {}) {
+  const qs = new URLSearchParams({ limit: String(limit) });
+  if (cursor) qs.set('cursor', cursor);
+  return apiJson(`/api/admin/users?${qs}`);
+}

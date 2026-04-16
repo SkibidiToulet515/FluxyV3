@@ -91,50 +91,54 @@ export async function ensureDefaultRoleDefinitions() {
   const defs = getDefaultRoleDefinitions();
   const ts = admin.firestore.FieldValue.serverTimestamp();
 
-  for (const def of Object.values(defs)) {
-    const ref = db.collection('roleDefinitions').doc(def.key);
-    const snap = await ref.get();
-    let permissions = { ...def.permissions };
-    if (snap.exists) {
-      const existing = snap.data().permissions || {};
-      for (const k of PERMISSION_KEYS) {
-        if (existing[k] !== undefined) permissions[k] = existing[k];
+  await Promise.all(
+    Object.values(defs).map(async (def) => {
+      const ref = db.collection('roleDefinitions').doc(def.key);
+      const snap = await ref.get();
+      let permissions = { ...def.permissions };
+      if (snap.exists) {
+        const existing = snap.data().permissions || {};
+        for (const k of PERMISSION_KEYS) {
+          if (existing[k] !== undefined) permissions[k] = existing[k];
+        }
       }
-    }
-    if (def.key === 'admin') permissions.protect_owner = false;
-    if (def.key === 'owner') {
-      permissions = { ...def.permissions };
-      for (const k of PERMISSION_KEYS) permissions[k] = true;
-    }
+      if (def.key === 'admin') permissions.protect_owner = false;
+      if (def.key === 'owner') {
+        permissions = { ...def.permissions };
+        for (const k of PERMISSION_KEYS) permissions[k] = true;
+      }
 
-    const payload = {
-      key: def.key,
-      displayName: def.displayName,
-      description: def.description,
-      system: def.system,
-      protected: def.protected,
-      privilegeTier: def.privilegeTier,
-      order: def.order,
-      permissions,
-      updatedAt: ts,
-    };
-    if (!snap.exists) {
-      payload.createdAt = ts;
-    }
-    await ref.set(payload, { merge: true });
-  }
+      const payload = {
+        key: def.key,
+        displayName: def.displayName,
+        description: def.description,
+        system: def.system,
+        protected: def.protected,
+        privilegeTier: def.privilegeTier,
+        order: def.order,
+        permissions,
+        updatedAt: ts,
+      };
+      if (!snap.exists) {
+        payload.createdAt = ts;
+      }
+      await ref.set(payload, { merge: true });
+    }),
+  );
 
   const allSnap = await db.collection('roleDefinitions').get();
-  for (const doc of allSnap.docs) {
-    if (defs[doc.id]) continue;
-    const d = doc.data();
-    if (d.privilegeTier) continue;
-    const tier = computePrivilegeTierFromPermissions(d.permissions || {});
-    await doc.ref.update({
-      privilegeTier: tier,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-  }
+  await Promise.all(
+    allSnap.docs.map(async (doc) => {
+      if (defs[doc.id]) return;
+      const d = doc.data();
+      if (d.privilegeTier) return;
+      const tier = computePrivilegeTierFromPermissions(d.permissions || {});
+      await doc.ref.update({
+        privilegeTier: tier,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }),
+  );
 
   console.log('[Firebase Admin] roleDefinitions synced (built-ins + metadata)');
 }

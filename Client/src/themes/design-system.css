@@ -1,0 +1,56 @@
+/* =============================================================================
+   Fluxy — shared UI tokens & utilities (glass / dark system)
+   Used across Home, Library, Game detail, Settings, admin.
+   ============================================================================= */
+
+html[data-fluxy-density='compact'] {
+  --fluxy-space-section: 1.25rem;
+  --fluxy-card-padding: 0.85rem 1rem;
+}
+
+html[data-fluxy-density='comfortable'] {
+  --fluxy-space-section: 2rem;
+  --fluxy-card-padding: 1.25rem 1.5rem;
+}
+
+html[data-fluxy-motion='reduced'] .animate-fade-in,
+html[data-fluxy-motion='reduced'] .reveal-item,
+html[data-fluxy-motion='reduced'] .fluxy-skeleton {
+  animation: none !important;
+}
+
+html[data-fluxy-motion='reduced'] * {
+  scroll-behavior: auto !important;
+}
+
+/* Shared form controls (align with Game detail / Settings) */
+.fluxy-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.fluxy-field-input {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--bg-input, rgba(0, 0, 0, 0.22));
+  color: var(--text-primary);
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fluxy-field-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 0 0 3px var(--accent-soft, rgba(123, 138, 255, 0.2));
+}
+
+/* Page shell: optional max-width helper */
+.fluxy-page-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}

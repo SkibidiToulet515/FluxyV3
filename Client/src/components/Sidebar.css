@@ -20,6 +20,13 @@
   display: none;
 }
 
+.sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .sidebar-header {
   display: flex;
   align-items: center;

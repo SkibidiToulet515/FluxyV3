@@ -1,0 +1,126 @@
+.shop-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding-bottom: 3rem;
+}
+
+.shop-hero {
+  padding: 1.35rem 1.5rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.shop-hero-inner {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.shop-hero-icon {
+  color: #a78bfa;
+  flex-shrink: 0;
+}
+
+.shop-hero h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.25rem;
+}
+
+.shop-hero p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  max-width: 520px;
+  line-height: 1.5;
+}
+
+.shop-balance {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.shop-balance .inclides-symbol {
+  color: #67e8f9;
+}
+
+.shop-msg {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.shop-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  padding: 2rem;
+  justify-content: center;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.shop-card {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shop-card-icon {
+  margin-bottom: 0.25rem;
+}
+
+.shop-card-icon .inclides-symbol {
+  color: #94a3b8;
+}
+
+.shop-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.shop-card-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  flex: 1;
+}
+
+.shop-card-cost {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.shop-owned {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #34d399;
+  font-weight: 600;
+}
+
+.shop-buy {
+  margin-top: 0.25rem;
+  justify-content: center;
+}

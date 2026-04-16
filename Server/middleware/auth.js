@@ -7,12 +7,17 @@ export function requireAuth(req, res, next) {
   }
 
   const token = header.slice(7);
-  verifyToken(token).then((decoded) => {
-    if (!decoded) return res.status(401).json({ error: 'Invalid token' });
-    req.uid = decoded.uid;
-    req.email = decoded.email;
-    next();
-  });
+  verifyToken(token)
+    .then((decoded) => {
+      if (!decoded) return res.status(401).json({ error: 'Invalid token' });
+      req.uid = decoded.uid;
+      req.email = decoded.email;
+      next();
+    })
+    .catch((err) => {
+      console.error('[Auth] requireAuth verifyToken:', err?.message || err);
+      return res.status(401).json({ error: 'Invalid token' });
+    });
 }
 
 export function requireRole(minRole) {
