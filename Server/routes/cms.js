@@ -18,7 +18,7 @@ router.get('/cms/homepage', async (req, res) => {
       return res.json({
         config: {
           featuredIds: [],
-          sectionOrder: ['continue', 'recent', 'featured', 'trending', 'recommended', 'favorites', 'new'],
+          sectionOrder: ['continue', 'featured', 'trending', 'recommended', 'favorites', 'new'],
           hiddenSections: [],
           marksNew: {},
         },

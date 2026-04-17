@@ -1,14 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import {
-  TrendingUp, Clock, Star, ArrowRight, Gamepad2, Globe, Sparkles, Heart, Layers,
+  TrendingUp, Clock, Star, ArrowRight, Gamepad2, Globe, Sparkles, Heart,
 } from 'lucide-react';
 import Header from '../components/Header';
 import GameCard from '../components/GameCard';
 import GlitchText from '../components/GlitchText';
 import { fetchGames, getRecentlyPlayed } from '../utils/api';
 import { padGameRow, MOCK_FEATURED, MOCK_TRENDING } from '../data/mockHomeGames.js';
-import { subscribeActivityLog } from '../services/libraryFirestore';
 import { useAuth } from '../utils/AuthContext';
 import { useLibrary } from '../contexts/LibraryContext';
 import PageSection from '../components/ui/PageSection';
@@ -22,7 +21,7 @@ import { useInclides } from '../contexts/InclidesContext';
 import './Home.css';
 
 const DEFAULT_HOME_SECTION_ORDER = [
-  'continue', 'recent', 'featured', 'trending', 'recommended', 'favorites', 'new',
+  'continue', 'featured', 'trending', 'recommended', 'favorites', 'new',
 ];
 
 export default function Home() {
@@ -33,14 +32,13 @@ export default function Home() {
   const { favorites } = useLibrary();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activity, setActivity] = useState([]);
   const [cms, setCms] = useState(null);
 
   const heroFx = useInteractiveCardFx();
   const gamesMagRef = useMagneticButton();
   const proxyMagRef = useMagneticButton();
 
-  const recentReveal = useRevealStagger();
+  const continueReveal = useRevealStagger();
   const featuredReveal = useRevealStagger();
   const trendingReveal = useRevealStagger();
   const favReveal = useRevealStagger();
@@ -51,7 +49,7 @@ export default function Home() {
     const raw = Array.isArray(cms?.sectionOrder) && cms.sectionOrder.length
       ? cms.sectionOrder
       : DEFAULT_HOME_SECTION_ORDER;
-    return raw.filter((id) => id && !hidden.has(id));
+    return raw.filter((id) => id && id !== 'recent' && !hidden.has(id));
   }, [cms]);
 
   useEffect(() => {
@@ -70,14 +68,6 @@ export default function Home() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (!user) {
-      setActivity([]);
-      return undefined;
-    }
-    return subscribeActivityLog(setActivity, 24);
-  }, [user]);
-
   const gamesById = useMemo(() => {
     const m = {};
     games.forEach((g) => {
@@ -91,15 +81,6 @@ export default function Home() {
     const list = recentlyPlayed.slice(0, 8).map((g) => gamesById[g.id] || g);
     return list.filter(Boolean);
   }, [recentlyPlayed, gamesById]);
-
-  const recentlyUsed = useMemo(() => {
-    if (!activity.length) return [];
-    return activity
-      .filter((a) => a.kind === 'game' && a.refId)
-      .map((a) => gamesById[a.refId])
-      .filter(Boolean)
-      .slice(0, 8);
-  }, [activity, gamesById]);
 
   const trending = useMemo(() => {
     const sorted = [...games].sort((a, b) => (b.plays || 0) - (a.plays || 0));
@@ -148,7 +129,7 @@ export default function Home() {
     : 'Your premium learning hub with interactive content across every subject.';
 
   function renderSection(sectionId) {
-    if ((sectionId === 'recent' || sectionId === 'favorites') && !user) return null;
+    if (sectionId === 'favorites' && !user) return null;
 
     switch (sectionId) {
       case 'continue':
@@ -161,30 +142,11 @@ export default function Home() {
           >
             {continuePlaying.length > 0 ? (
               <div
-                ref={recentReveal.ref}
-                className={`game-grid reveal-group${recentReveal.visible || !loading ? ' reveal-group--visible' : ''}`}
+                ref={continueReveal.ref}
+                className={`game-grid reveal-group${continueReveal.visible || !loading ? ' reveal-group--visible' : ''}`}
               >
                 {continuePlaying.map((game, i) => (
                   <div key={game.id} className="reveal-item" style={{ '--stagger': i }}>
-                    <GameCard game={game} />
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </PageSection>
-        );
-      case 'recent':
-        return (
-          <PageSection
-            key="recent"
-            title="Recently used"
-            icon={Layers}
-            empty={!recentlyUsed.length ? 'Browse games or tools — recent activity will sync when you’re signed in.' : null}
-          >
-            {recentlyUsed.length > 0 ? (
-              <div className="game-grid reveal-group reveal-group--visible">
-                {recentlyUsed.map((game, i) => (
-                  <div key={`${game.id}-ru`} className="reveal-item" style={{ '--stagger': i }}>
                     <GameCard game={game} />
                   </div>
                 ))}

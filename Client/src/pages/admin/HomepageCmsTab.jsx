@@ -5,7 +5,6 @@ import './HomepageCmsTab.css';
 
 const SECTIONS = [
   { id: 'continue', label: 'Continue playing' },
-  { id: 'recent', label: 'Recently used' },
   { id: 'featured', label: 'Featured' },
   { id: 'trending', label: 'Trending' },
   { id: 'recommended', label: 'Recommended' },
@@ -35,7 +34,7 @@ export default function HomepageCmsTab() {
         setFeaturedIds((c.featuredIds || []).join(', '));
         setHidden(c.hiddenSections || []);
         if (Array.isArray(c.sectionOrder) && c.sectionOrder.length) {
-          setOrder(c.sectionOrder);
+          setOrder(c.sectionOrder.filter((id) => id !== 'recent'));
         }
       } catch {
         /* ignore */
