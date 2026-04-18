@@ -1,16 +1,19 @@
 ---
-description: After completing work, commit and push all changes automatically
+description: After code changes, always commit, push, and deploy Firebase hosting
 alwaysApply: true
 ---
 
-# Git commit and push after tasks
+# Commit, push, and deploy after tasks
 
-When you finish a task in this repository (implementation, fixes, or docs the user asked for):
+When you finish work in this repository (any meaningful code or config change the user asked for):
 
-1. Run `git add -A` from the repo root.
-2. Run `git commit` with a **clear, conventional message** (imperative mood, present tense). Summarize what changed and why in the first line (~72 chars); add a short body if the diff is large or spans areas (e.g. client vs server).
-3. Run `git push` to push the commit to the remote.
+1. **`git add -A`** from the repo root (or stage only what belongs in the change—no unrelated noise).
+2. **`git commit`** with a clear message: imperative mood, present tense; first line ~72 chars; optional short body for large diffs.
+3. **`git push`** to the default remote (usually `origin` / current branch).
+4. **Deploy** the client: from repo root run **`npm run deploy:hosting`**  
+   This runs `node Client/scripts/run-build.mjs` then **`firebase deploy --only hosting`**.  
+   If the build step fails in the environment, build manually in `Client/` (`node node_modules/vite/bin/vite.js build` after sync if needed), then run **`firebase deploy --only hosting`** from root so **https://fluxyv3-prod.web.app** (project `fluxyv3-prod`) is updated.
 
-If there is **nothing to commit** (clean working tree), skip the commit and say so.
+Skip commit/push/deploy if the working tree is clean after the task, or if the user only asked a question with **no** file edits (no empty commits).
 
-If the user asked only a question with **no file edits**, do not create an empty commit.
+If deploy cannot run (no Firebase CLI, not logged in, or user says to skip), say so explicitly after commit/push.
