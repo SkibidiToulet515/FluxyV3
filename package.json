@@ -8,6 +8,7 @@
     "build": "npm ci --prefix Server",
     "start": "node Server/index.js",
     "build:client": "node Client/scripts/run-build.mjs",
-    "deploy:hosting": "node Client/scripts/run-build.mjs && firebase deploy --only hosting"
+    "deploy:hosting": "node Client/scripts/run-build.mjs && firebase deploy --only hosting",
+    "verify:inclides": "node Server/scripts/verify-inclides.mjs"
   }
 }
