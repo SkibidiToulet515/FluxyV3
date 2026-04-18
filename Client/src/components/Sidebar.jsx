@@ -87,7 +87,7 @@ export default function Sidebar({ collapsed, onToggle, account, onLogout }) {
             </span>
           </Link>
           <div className="sidebar-header-actions">
-            <InclidesBalancePill compact />
+            {!collapsed ? <InclidesBalancePill compact /> : null}
             <NotificationBell />
             <button
               className="sidebar-collapse-btn"

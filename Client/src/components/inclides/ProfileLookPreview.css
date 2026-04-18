@@ -1,0 +1,35 @@
+/* Scoped scale for modal — cosmetics selectors stay on .profile-page */
+
+.profile-look-preview-root {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.profile-look-preview-root .profile-hero {
+  margin: 0;
+}
+
+.profile-look-preview-root .profile-banner {
+  height: 100px;
+}
+
+.profile-look-preview-root .profile-hero-inner {
+  margin-top: -40px;
+  padding: 0 1rem 1.1rem;
+}
+
+.profile-look-preview-root .profile-avatar-lg {
+  width: 80px;
+  height: 80px;
+  font-size: 2rem;
+  border-radius: 18px;
+}
+
+.profile-look-preview-root .profile-hero-text h2 {
+  font-size: 1.25rem;
+}
+
+.profile-look-preview-root .profile-bio {
+  font-size: 0.8rem;
+}

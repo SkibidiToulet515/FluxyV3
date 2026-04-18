@@ -27,3 +27,17 @@ export function slotKeyForCategory(category) {
 export function rarityRank(r) {
   return RARITY_ORDER[r] ?? 0;
 }
+
+/** Maps equipped slot ids → data-equip-* attributes (same as public Profile). */
+export function slotsToEquipDataAttrs(slots = {}) {
+  const pick = (k) => (slots[k] ? String(slots[k]) : undefined);
+  return {
+    'data-equip-frames': pick('frames'),
+    'data-equip-effects': pick('effects'),
+    'data-equip-banners': pick('banners'),
+    'data-equip-name-effects': pick('name_effects'),
+    'data-equip-badges': pick('badges'),
+    'data-equip-profile-backgrounds': pick('profile_backgrounds'),
+    'data-equip-extras': pick('extras'),
+  };
+}

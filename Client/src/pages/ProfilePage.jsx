@@ -17,6 +17,7 @@ import InclidesSymbol from '../components/inclides/InclidesSymbol';
 import { formatInclidesAmount } from '../services/inclidesApi';
 import './ProfilePage.css';
 import './profileCosmetics.css';
+import { slotsToEquipDataAttrs } from '../lib/inclidesShopUtils';
 
 export default function ProfilePage() {
   const { username } = useParams();
@@ -146,16 +147,7 @@ export default function ProfilePage() {
         slots.frames = profile.inclidesEquippedItemId;
       }
     }
-    const pick = (k) => (slots[k] ? String(slots[k]) : undefined);
-    return {
-      'data-equip-frames': pick('frames'),
-      'data-equip-effects': pick('effects'),
-      'data-equip-banners': pick('banners'),
-      'data-equip-name-effects': pick('name_effects'),
-      'data-equip-badges': pick('badges'),
-      'data-equip-profile-backgrounds': pick('profile_backgrounds'),
-      'data-equip-extras': pick('extras'),
-    };
+    return slotsToEquipDataAttrs(slots);
   }, [isSelf, selfSlots, profile]);
 
   return (
