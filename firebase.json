@@ -8,6 +8,26 @@
         "destination": "/games/404.html"
       },
       {
+        "source": "/uv/**",
+        "destination": "/404.html"
+      },
+      {
+        "source": "/scram/**",
+        "destination": "/404.html"
+      },
+      {
+        "source": "/baremux/**",
+        "destination": "/404.html"
+      },
+      {
+        "source": "/epoxy/**",
+        "destination": "/404.html"
+      },
+      {
+        "source": "/wisp/**",
+        "destination": "/404.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

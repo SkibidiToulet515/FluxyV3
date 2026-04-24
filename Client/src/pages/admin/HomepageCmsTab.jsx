@@ -25,9 +25,7 @@ export default function HomepageCmsTab() {
     let cancelled = false;
     (async () => {
       try {
-        const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-        const res = await fetch(`${base}/api/cms/homepage`);
-        const data = await res.json();
+        const data = await apiJson('/api/cms/homepage');
         if (cancelled) return;
         const c = data.config || {};
         setConfig(c);

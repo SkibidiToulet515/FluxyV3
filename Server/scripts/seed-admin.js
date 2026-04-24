@@ -2,6 +2,7 @@ import 'dotenv/config';
 import admin from 'firebase-admin';
 import path from 'path';
 import { createRequire } from 'module';
+import { createInterface } from 'readline';
 
 const require = createRequire(import.meta.url);
 
@@ -20,28 +21,62 @@ if (svcPath) {
   admin.initializeApp({ credential: admin.credential.applicationDefault(), projectId });
 }
 
-const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || 'admin@fluxyv3.online';
-const ADMIN_PASS = process.env.SEED_ADMIN_PASS || '09876543211';
+function prompt(question) {
+  const rl = createInterface({ input: process.stdin, output: process.stderr });
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
+
+async function getCredentials() {
+  let email = process.env.SEED_ADMIN_EMAIL;
+  let password = process.env.SEED_ADMIN_PASS;
+
+  if (!email) {
+    email = await prompt('Admin email: ');
+  }
+  if (!email) {
+    console.error('Email is required. Set SEED_ADMIN_EMAIL in .env or enter it when prompted.');
+    process.exit(1);
+  }
+
+  if (!password || password === 'CHANGE_ME_BEFORE_USE') {
+    password = await prompt('Admin password (min 6 chars): ');
+  }
+  if (!password || password.length < 6) {
+    console.error('Password is required and must be at least 6 characters.');
+    console.error('Set SEED_ADMIN_PASS in .env or enter it when prompted.');
+    process.exit(1);
+  }
+
+  return { email, password };
+}
+
 const ADMIN_USERNAME = 'Fluxinator';
 
 async function seed() {
+  const { email, password } = await getCredentials();
+
   const authSvc = admin.auth();
   const db = admin.firestore();
 
   let uid;
   try {
-    const existing = await authSvc.getUserByEmail(ADMIN_EMAIL);
+    const existing = await authSvc.getUserByEmail(email);
     uid = existing.uid;
-    console.log(`Admin account already exists: ${ADMIN_EMAIL} (${uid})`);
+    console.log(`Admin account already exists: ${email} (${uid})`);
   } catch (err) {
     if (err.code === 'auth/user-not-found') {
       const created = await authSvc.createUser({
-        email: ADMIN_EMAIL,
-        password: ADMIN_PASS,
+        email,
+        password,
         displayName: ADMIN_USERNAME,
       });
       uid = created.uid;
-      console.log(`Created admin account: ${ADMIN_EMAIL} (${uid})`);
+      console.log(`Created admin account: ${email} (${uid})`);
     } else {
       throw err;
     }
@@ -51,7 +86,7 @@ async function seed() {
     {
       username: ADMIN_USERNAME,
       usernameLower: ADMIN_USERNAME.toLowerCase(),
-      email: ADMIN_EMAIL,
+      email,
       role: 'admin',
       status: 'offline',
       avatar: null,
@@ -63,12 +98,11 @@ async function seed() {
   );
 
   console.log(`Firestore user doc set with role=admin for ${ADMIN_USERNAME}`);
-  console.log('\n--- Admin Credentials ---');
-  console.log(`Email:    ${ADMIN_EMAIL}`);
-  console.log(`Password: ${ADMIN_PASS}`);
+  console.log('\n--- Admin Account ---');
+  console.log(`Email:    ${email}`);
   console.log(`Username: ${ADMIN_USERNAME}`);
   console.log('Role:     admin');
-  console.log('-------------------------\n');
+  console.log('---------------------\n');
   process.exit(0);
 }
 

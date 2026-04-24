@@ -18,6 +18,7 @@ import { useRevealStagger } from '../hooks/useRevealStagger';
 import { GAMES_CATALOG_PATH } from '../config/subjects';
 import DailyInclidesCard from '../components/inclides/DailyInclidesCard';
 import { useInclides } from '../contexts/InclidesContext';
+import { fetchCmsHomepageConfig } from '../services/cmsApi';
 import './Home.css';
 
 const DEFAULT_HOME_SECTION_ORDER = [
@@ -60,13 +61,18 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-    if (!base) return;
-    fetch(`${base}/api/cms/homepage`)
-      .then((r) => r.json())
-      .then((d) => setCms(d.config || null))
-      .catch(() => {});
-  }, []);
+    let cancelled = false;
+    fetchCmsHomepageConfig()
+      .then((config) => {
+        if (!cancelled) setCms(config);
+      })
+      .catch(() => {
+        if (!cancelled) setCms(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid]);
 
   const gamesById = useMemo(() => {
     const m = {};

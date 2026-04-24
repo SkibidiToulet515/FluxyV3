@@ -14,15 +14,86 @@ import './Proxy.css';
 
 const PROVIDER_ICONS = { Zap, Shield };
 
+/** Wisp WebSocket lives on the API host when the SPA is on static hosting (e.g. Firebase). */
+function wispOriginForTransport() {
+  const api = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
+  if (api) {
+    return api.replace(/^https:\/\//i, 'wss://').replace(/^http:\/\//i, 'ws://');
+  }
+  return window.location.origin
+    .replace(/^https:/i, 'wss:')
+    .replace(/^http:/i, 'ws:');
+}
+
+/** Worker + epoxy must be same-origin as the SPA so SharedWorker/MessagePort works; only wisp hits the API. */
+let bareMuxCtorMemo = null;
+
+async function fetchBareMuxScriptText() {
+  const paths = ['/baremux/index.mjs', '/baremux/index.js'];
+  const tryFetch = async (url) => {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) return null;
+    const code = await res.text();
+    return code;
+  };
+
+  for (const p of paths) {
+    const code = await tryFetch(p);
+    if (code) return { code, isMjs: p.endsWith('.mjs') };
+  }
+
+  /* Same-origin /baremux/ can 404 on Hosting if assets were not synced; API always serves /baremux/ from node_modules. */
+  const api = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
+  if (api) {
+    for (const p of paths) {
+      const code = await tryFetch(`${api}${p}`);
+      if (code) return { code, isMjs: p.endsWith('.mjs') };
+    }
+  }
+  return null;
+}
+
+/**
+ * Load bare-mux (ESM or UMD). Script may be fetched from the API with CORS, but worker paths stay on the page origin.
+ */
 async function loadBareMux() {
-  if (globalThis.BareMux?.BareMuxConnection) return globalThis.BareMux.BareMuxConnection;
+  if (bareMuxCtorMemo) return bareMuxCtorMemo;
+  if (globalThis.BareMux?.BareMuxConnection) {
+    bareMuxCtorMemo = globalThis.BareMux.BareMuxConnection;
+    return bareMuxCtorMemo;
+  }
 
-  const res = await fetch('/baremux/index.js');
-  if (!res.ok) throw new Error(`Failed to fetch bare-mux: ${res.status}`);
-  const code = await res.text();
+  const got = await fetchBareMuxScriptText();
+  const api = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
+  if (!got) {
+    throw new Error(
+      'Could not load bare-mux from /baremux/ (static hosting or dev proxy). ' +
+      (api ? ` Also tried ${api}/baremux/.` : '') +
+      ' Run npm ci in Server/ before build so syncProxyToPublic copies bare-mux into public/baremux.',
+    );
+  }
 
-  /* Evaluate UMD bundle so `this` in the IIFE resolves to `window`,
-     which lets the UMD path set globalThis.BareMux correctly. */
+  const { code, isMjs } = got;
+
+  if (isMjs) {
+    const blobUrl = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+    try {
+      const mod = await import(/* @vite-ignore */ blobUrl);
+      const Ctor = mod.BareMuxConnection || mod.default?.BareMuxConnection;
+      if (typeof Ctor !== 'function') {
+        throw new Error('bare-mux ESM bundle has no BareMuxConnection export');
+      }
+      bareMuxCtorMemo = Ctor;
+      globalThis.BareMux = globalThis.BareMux || {};
+      globalThis.BareMux.BareMuxConnection = Ctor;
+      return Ctor;
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
+  }
+
   const fn = new Function(code);
   fn.call(window);
 
@@ -32,10 +103,19 @@ async function loadBareMux() {
       `Keys: ${Object.keys(globalThis.BareMux || {}).join(', ') || 'none'}`
     );
   }
-  return globalThis.BareMux.BareMuxConnection;
+  bareMuxCtorMemo = globalThis.BareMux.BareMuxConnection;
+  return bareMuxCtorMemo;
 }
 
 let swState = { ready: false, error: null, engines: null };
+
+/** Epoxy + wisp must be configured before the proxy SW loads so UV/Scramjet BareClient can use the transport. */
+async function initBareMuxTransport() {
+  const BMC = await loadBareMux();
+  const conn = new BMC('/baremux/worker.js');
+  const wispUrl = `${wispOriginForTransport()}/wisp/`;
+  await conn.setTransport('/epoxy/index.mjs', [{ wisp: wispUrl }]);
+}
 
 function pingSW(sw, timeout = 3000) {
   return new Promise((resolve) => {
@@ -52,6 +132,22 @@ function pingSW(sw, timeout = 3000) {
 }
 
 async function ensureServiceWorker() {
+  if (import.meta.env.VITE_ENABLE_PROXY_SW === 'false') {
+    if ('serviceWorker' in navigator) {
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const r of regs) await r.unregister();
+      } catch {
+        /* ignore */
+      }
+    }
+    swState.ready = false;
+    swState.engines = null;
+    swState.error =
+      'Private browsing is disabled (VITE_ENABLE_PROXY_SW=false). Remove it to enable the proxy worker.';
+    return swState;
+  }
+
   if (swState.ready) return swState;
   if (!('serviceWorker' in navigator)) {
     swState.error = 'Service workers are not supported in this browser.';
@@ -62,6 +158,8 @@ async function ensureServiceWorker() {
     /* Unregister stale workers first so we always get the latest sw.js */
     const regs = await navigator.serviceWorker.getRegistrations();
     for (const r of regs) await r.unregister();
+
+    await initBareMuxTransport();
 
     const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
 
@@ -85,13 +183,6 @@ async function ensureServiceWorker() {
     const pong = await pingSW(active);
     swState.engines = pong;
 
-    /* Wire up bare-mux transport → epoxy → wisp server */
-    const BMC = await loadBareMux();
-    const conn = new BMC('/baremux/worker.js');
-    await conn.setTransport('/epoxy/index.mjs', [
-      { wisp: `${location.origin}/wisp/` },
-    ]);
-
     swState.ready = true;
     return swState;
   } catch (err) {
@@ -113,6 +204,8 @@ export default function Proxy() {
   const [frameUrl, setFrameUrl] = useState('');
   const [browsing, setBrowsing] = useState(false);
   const iframeRef = useRef(null);
+  /** After user leaves the iframe view, do not auto-open DuckDuckGo again until provider changes or remount. */
+  const userExitedBrowsingRef = useRef(false);
 
   /* Health check */
   const runHealthCheck = useCallback(async () => {
@@ -140,6 +233,7 @@ export default function Proxy() {
     function onProviderChange() {
       const next = getActiveProvider();
       setProvider(next);
+      userExitedBrowsingRef.current = false;
       setBrowsing(false);
       setFrameUrl('');
       setQuery('');
@@ -169,6 +263,7 @@ export default function Proxy() {
   }
 
   function exitBrowsing() {
+    userExitedBrowsingRef.current = true;
     setBrowsing(false);
     setFrameUrl('');
     setQuery('');
@@ -176,6 +271,14 @@ export default function Proxy() {
 
   const ProviderIcon = PROVIDER_ICONS[provider.icon] ?? Zap;
   const isAvailable = health?.available === true;
+
+  /* Default experience: open DuckDuckGo in the proxy once the service worker is ready. */
+  useEffect(() => {
+    if (checking || !isAvailable || swError || !swReady || browsing || userExitedBrowsingRef.current) return;
+    const encoded = getActiveProvider().adapter.encode('https://duckduckgo.com');
+    setFrameUrl(encoded);
+    setBrowsing(true);
+  }, [checking, isAvailable, swError, swReady, browsing]);
 
   /* ---------- Landing ---------- */
   if (!browsing) {

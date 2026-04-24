@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useLayoutEffect } from 'react';
+import { Component, useState, useCallback, useMemo, useEffect, useLayoutEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Background from './components/Background';
@@ -31,6 +31,52 @@ import { useAuth } from './utils/AuthContext';
 import useGlobalClickEffects from './utils/useGlobalClickEffects';
 import { getPerformanceProfile } from './utils/performanceProfile';
 
+// ─── Error Boundary ────────────────────────────────────────────────────────────
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error, info) {
+    console.error('[ErrorBoundary]', error, info?.componentStack);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          minHeight: '100vh', padding: '2rem', color: '#e4e4e7', fontFamily: 'system-ui, sans-serif',
+          background: '#0a0a0f',
+        }}>
+          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.75rem' }}>Something went wrong</h1>
+          <p style={{ color: '#a1a1aa', maxWidth: 480, textAlign: 'center', marginBottom: '1rem' }}>
+            {this.state.error?.message || 'An unexpected error occurred.'}
+          </p>
+          <button
+            onClick={() => { this.setState({ error: null }); window.location.reload(); }}
+            style={{
+              padding: '0.5rem 1.25rem', borderRadius: 8, border: '1px solid #27272a',
+              background: '#18181b', color: '#e4e4e7', cursor: 'pointer', fontSize: '0.875rem',
+            }}
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ─── Auth gate ─────────────────────────────────────────────────────────────────
+
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
   if (loading) return null;
@@ -38,20 +84,36 @@ function RequireAuth({ children }) {
   return children;
 }
 
+// ─── App Shell ─────────────────────────────────────────────────────────────────
+
 function AppShell() {
   useGlobalClickEffects(true);
 
-  const perf = useMemo(() => getPerformanceProfile(), []);
+  const [perf, setPerf] = useState(() => getPerformanceProfile());
+  const [cursorEnabled, setCursorEnabled] = useState(
+    () => typeof localStorage !== 'undefined' ? localStorage.getItem('fluxy-custom-cursor') !== 'false' : true,
+  );
 
   useLayoutEffect(() => {
     document.documentElement.dataset.fluxyPerf = perf.tier;
-    return () => {
-      delete document.documentElement.dataset.fluxyPerf;
-    };
+    return () => { delete document.documentElement.dataset.fluxyPerf; };
   }, [perf.tier]);
 
-  const cursorEnabled =
-    typeof localStorage !== 'undefined' ? localStorage.getItem('fluxy-custom-cursor') !== 'false' : true;
+  // Listen for live settings changes (no reload needed)
+  useEffect(() => {
+    function onCursorChange() {
+      setCursorEnabled(localStorage.getItem('fluxy-custom-cursor') !== 'false');
+    }
+    function onPerfChange() {
+      setPerf(getPerformanceProfile());
+    }
+    window.addEventListener('fluxy-cursor-change', onCursorChange);
+    window.addEventListener('fluxy-perf-change', onPerfChange);
+    return () => {
+      window.removeEventListener('fluxy-cursor-change', onCursorChange);
+      window.removeEventListener('fluxy-perf-change', onPerfChange);
+    };
+  }, []);
 
   return (
     <>
@@ -95,14 +157,16 @@ function AppShell() {
   );
 }
 
+// ─── Root ──────────────────────────────────────────────────────────────────────
+
 export default function App() {
   const [loaded, setLoaded] = useState(false);
   const handleDone = useCallback(() => setLoaded(true), []);
 
   return (
-    <>
+    <ErrorBoundary>
       {!loaded && <LoadingScreen onDone={handleDone} />}
       <AppShell />
-    </>
+    </ErrorBoundary>
   );
 }

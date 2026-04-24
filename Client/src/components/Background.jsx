@@ -138,7 +138,7 @@ export default function Background({ mode = 'full' }) {
         const alpha = fadeIn * fadeOut * (0.4 + m.depth * 0.6);
 
         const [cr, cg, cb] = m.useEnd ? colors.end : colors.start;
-        const norm = Math.hypot(m.vx, m.vy);
+        const norm = Math.hypot(m.vx, m.vy) || 1;
         const dx = m.vx / norm;
         const dy = -m.vy / norm;
 
@@ -159,12 +159,12 @@ export default function Background({ mode = 'full' }) {
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.arc(m.x, m.y, m.size * 1.5, 0, Math.PI * 2);
+        ctx.arc(m.x, m.y, Math.max(0, m.size * 1.5), 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255,255,255,${alpha * 0.6})`;
         ctx.fill();
 
         ctx.beginPath();
-        ctx.arc(m.x, m.y, m.size * 4 * m.depth, 0, Math.PI * 2);
+        ctx.arc(m.x, m.y, Math.max(0, m.size * 4 * m.depth), 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha * 0.12})`;
         ctx.fill();
 
@@ -192,7 +192,7 @@ export default function Background({ mode = 'full' }) {
         ctx.globalAlpha = a * 0.5;
         ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, Math.max(0, p.size), 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.globalAlpha = 1;

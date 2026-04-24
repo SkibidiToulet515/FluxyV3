@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Gavel, Ban, LogOut } from 'lucide-react';
 import { apiJson } from '../../services/apiClient';
@@ -46,8 +46,10 @@ export default function AppealCenter({ variant = 'default' }) {
   const [confirmAck, setConfirmAck] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const didAutoSelectBan = useRef(false);
 
   const load = useCallback(async () => {
+    didAutoSelectBan.current = false;
     setLoading(true);
     setError('');
     try {
@@ -69,6 +71,16 @@ export default function AppealCenter({ variant = 'default' }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  /** Banned users often only need to appeal the ban — select it once when it is the only option. */
+  useEffect(() => {
+    if (loading || !isBanned || didAutoSelectBan.current) return;
+    if (eligible.length !== 1) return;
+    const only = eligible[0];
+    if (only?.type !== 'ban') return;
+    didAutoSelectBan.current = true;
+    setSelectedId(only.id);
+  }, [loading, isBanned, eligible]);
 
   const selected = eligible.find((p) => p.id === selectedId);
 

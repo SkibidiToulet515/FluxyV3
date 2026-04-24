@@ -8,10 +8,19 @@
 import { DEFAULT_PROVIDER, getProvider, getAllProviders, PROVIDER_IDS } from './registry.js';
 
 const STORAGE_KEY = 'fluxy-web-provider';
+/** One-time migration: Scramjet 1.x SW is incompatible with bare-mux v2 (invalid MessagePort). */
+const SCRAMJET_BARE2_MIGRATION = 'fluxy-migrate-scramjet-to-uv-v1';
 
 export function getActiveProviderId() {
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored && PROVIDER_IDS.includes(stored)) return stored;
+  if (stored && PROVIDER_IDS.includes(stored)) {
+    if (stored === 'scramjet' && !localStorage.getItem(SCRAMJET_BARE2_MIGRATION)) {
+      localStorage.setItem(STORAGE_KEY, 'ultraviolet');
+      localStorage.setItem(SCRAMJET_BARE2_MIGRATION, '1');
+      return 'ultraviolet';
+    }
+    return stored;
+  }
   return DEFAULT_PROVIDER;
 }
 

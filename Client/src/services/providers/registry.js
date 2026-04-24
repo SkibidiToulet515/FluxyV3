@@ -28,7 +28,8 @@ const PROVIDERS = {
 };
 
 export const PROVIDER_IDS = Object.keys(PROVIDERS);
-export const DEFAULT_PROVIDER = 'scramjet';
+/* Scramjet 1.x SW expects legacy bare-mux BCC; we ship bare-mux v2 + epoxy. UV works with v2. */
+export const DEFAULT_PROVIDER = 'ultraviolet';
 
 export function getProvider(id) {
   return PROVIDERS[id] ?? null;

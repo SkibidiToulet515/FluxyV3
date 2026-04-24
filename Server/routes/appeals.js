@@ -32,6 +32,31 @@ function tsToIso(v) {
   return typeof v === 'string' ? v : null;
 }
 
+/** True if this punishment doc is the user's active ban (even if `type` was omitted in older data). */
+function isBanPunishmentDoc(p, u) {
+  if (!p || !u) return false;
+  if (p.type === 'ban') return true;
+  if (u.banned === true && u.activeBanPunishmentId && p.id === u.activeBanPunishmentId) return true;
+  return false;
+}
+
+function isMutePunishmentDoc(p, u) {
+  if (!p || !u) return false;
+  if (p.type === 'mute') return true;
+  if (!u.activeMutePunishmentId || p.id !== u.activeMutePunishmentId) return false;
+  const mu = u.mutedUntil;
+  if (!mu) return false;
+  const until = mu.toDate ? mu.toDate() : new Date(mu);
+  return until.getTime() > Date.now();
+}
+
+function normalizePunishmentDocForClient(p, u) {
+  const out = { ...p };
+  if (isBanPunishmentDoc(p, u)) out.type = 'ban';
+  else if (isMutePunishmentDoc(p, u)) out.type = 'mute';
+  return out;
+}
+
 async function writeModerationLog(actorUid, action, details = {}, targetUid = null) {
   const db = getAdminFirestore();
   await db.collection('moderationLogs').add({
@@ -159,7 +184,13 @@ async function resolvePunishment(db, userId, punishmentId) {
     const p = ps.data();
     if (p.userId !== userId) return { error: 'Forbidden' };
     if (!p.active) return { error: 'Punishment is no longer active' };
-    return { synthetic: false, id: punishmentId, ...p };
+    const uSnap = await db.collection('users').doc(userId).get();
+    const u = uSnap.data() || {};
+    const merged = { synthetic: false, id: punishmentId, ...p };
+    const row = { ...p, id: punishmentId };
+    if (isBanPunishmentDoc(row, u)) merged.type = 'ban';
+    else if (isMutePunishmentDoc(row, u)) merged.type = 'mute';
+    return merged;
   }
 
   const uSnap = await db.collection('users').doc(userId).get();
@@ -205,7 +236,7 @@ router.get('/eligible', async (req, res) => {
     const punishmentDocs = punishSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
     const seenBan = punishmentDocs.some((p) => p.type === 'ban');
-    const seenMute = punishmentDocs.some((p) => p.type === 'mute');
+    const seenMute = punishmentDocs.some((p) => isMutePunishmentDoc(p, u));
 
     for (const p of punishmentDocs) {
       const open = await hasOpenAppeal(db, p.id);
@@ -301,7 +332,7 @@ function dedupeEligible(list) {
 function formatPunishmentOut(p) {
   return {
     id: p.id,
-    type: p.type,
+    type: p.type || 'warning',
     reason: p.reason || '',
     issuedBy: p.issuedBy || null,
     issuedAt: tsToIso(p.issuedAt) || p.issuedAt || null,

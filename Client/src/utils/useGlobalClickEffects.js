@@ -103,18 +103,21 @@ export default function useGlobalClickEffects(enabled = true) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       ripplesRef.current = ripplesRef.current.filter((r) => {
-        const age = time - r.born;
+        const age = Math.max(0, time - r.born);
         if (age > RIPPLE_LIFETIME_MS) return false;
-        const t = age / RIPPLE_LIFETIME_MS;
-        const radius = t * RIPPLE_MAX_RADIUS;
-        const alpha = (1 - t) * 0.45;
+        const denom = RIPPLE_LIFETIME_MS;
+        const rawT = denom > 0 ? age / denom : 0;
+        const t = Math.min(1, Math.max(0, Number.isFinite(rawT) ? rawT : 0));
+        const radius = Math.max(0, Math.min(RIPPLE_MAX_RADIUS, t * RIPPLE_MAX_RADIUS));
+        const innerR = Math.max(0, radius * 0.92);
+        const alpha = Math.max(0, (1 - t) * 0.45);
         ctx.beginPath();
         ctx.arc(r.x, r.y, radius, 0, Math.PI * 2);
         ctx.strokeStyle = `rgba(34, 211, 238, ${alpha})`;
         ctx.lineWidth = 2;
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(r.x, r.y, radius * 0.92, 0, Math.PI * 2);
+        ctx.arc(r.x, r.y, innerR, 0, Math.PI * 2);
         ctx.strokeStyle = `rgba(244, 114, 182, ${alpha * 0.7})`;
         ctx.lineWidth = 1;
         ctx.stroke();
@@ -122,7 +125,7 @@ export default function useGlobalClickEffects(enabled = true) {
       });
 
       confettiRef.current = confettiRef.current.filter((p) => {
-        const age = time - p.born;
+        const age = Math.max(0, time - p.born);
         if (age > CONFETTI_LIFETIME_MS) return false;
         const progress = age / CONFETTI_LIFETIME_MS;
         const alpha = (1 - progress) * (1 - progress);

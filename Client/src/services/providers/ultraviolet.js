@@ -5,6 +5,8 @@
  * The service worker intercepts requests matching this prefix and proxies them.
  */
 
+import { normalizeInput } from './normalizeInput.js';
+
 const PREFIX = '/uv/service/';
 
 function xorEncode(input) {
@@ -33,10 +35,3 @@ export const ultravioletAdapter = {
     return (import.meta.env.VITE_API_URL || '') + '/api/providers/ultraviolet/status';
   },
 };
-
-function normalizeInput(raw) {
-  const trimmed = raw.trim();
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (trimmed.includes('.') && !trimmed.includes(' ')) return `https://${trimmed}`;
-  return `https://duckduckgo.com/?q=${encodeURIComponent(trimmed)}`;
-}

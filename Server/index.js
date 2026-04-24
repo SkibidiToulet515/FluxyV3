@@ -86,6 +86,12 @@ app.use(express.json());
 app.use('/api', apiLimiter);
 
 // --- Static library files for proxy providers ---
+// Custom config overlays must be served BEFORE npm package files so that
+// project-specific prefix/path settings (e.g. /uv/service/ instead of /service/)
+// take priority over the defaults shipped inside the npm packages.
+const clientPublic = path.resolve(import.meta.dirname, '..', 'Client', 'public');
+app.use('/uv/', express.static(path.join(clientPublic, 'uv')));
+app.use('/scram/', express.static(path.join(clientPublic, 'scram')));
 app.use('/scram/', express.static(scramjetPath));
 app.use('/uv/', express.static(uvPath));
 app.use('/baremux/', express.static(baremuxPath));
@@ -128,7 +134,14 @@ if (process.env.NODE_ENV === 'production') {
   const clientDist = path.resolve(import.meta.dirname, '..', 'Client', 'dist');
   app.use(express.static(clientDist));
   app.get('*', (req, res, next) => {
-    if (req.url.startsWith('/api') || req.url.startsWith('/socket.io')) return next();
+    const p = req.path;
+    // Never serve index.html for API, socket, or proxy-library paths
+    if (
+      p.startsWith('/api') || p.startsWith('/socket.io') ||
+      p.startsWith('/uv/') || p.startsWith('/scram/') ||
+      p.startsWith('/baremux/') || p.startsWith('/epoxy/') ||
+      p.startsWith('/wisp/') || p === '/sw.js'
+    ) return next();
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 }
@@ -142,11 +155,10 @@ httpServer.on('request', (req, res) => {
 
 // --- Wisp WebSocket transport (used by both Scramjet & UV via bare-mux) ---
 httpServer.on('upgrade', (req, socket, head) => {
-  if (req.url.endsWith('/wisp/')) {
+  if (req.url.endsWith('/wisp/') || req.url.startsWith('/wisp/')) {
     wisp.routeRequest(req, socket, head);
-  } else {
-    socket.end();
   }
+  // Non-wisp upgrades (e.g. Socket.io) fall through to their own handlers
 });
 
 // --- Socket.io (chat) — attach after wisp so wisp gets first crack at upgrades ---
