@@ -159,8 +159,6 @@ async function ensureServiceWorker() {
     const regs = await navigator.serviceWorker.getRegistrations();
     for (const r of regs) await r.unregister();
 
-    await initBareMuxTransport();
-
     const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
 
     /* Wait for the new SW to activate */
@@ -177,6 +175,10 @@ async function ensureServiceWorker() {
     }
 
     await navigator.serviceWorker.ready;
+
+    /* Configure bare-mux transport AFTER the SW is active so its
+       BroadcastChannel listener is ready to receive the transport config. */
+    await initBareMuxTransport();
 
     /* Ping the SW to see which engines loaded successfully */
     const active = reg.active || (await navigator.serviceWorker.ready).active;
