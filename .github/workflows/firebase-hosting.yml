@@ -32,7 +32,12 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: Client/package-lock.json
+          cache-dependency-path: |
+            Client/package-lock.json
+            Server/package-lock.json
+
+      - name: Install server deps (proxy libraries needed by client build)
+        run: npm ci --prefix Server
 
       - name: Install and build client
         env:
